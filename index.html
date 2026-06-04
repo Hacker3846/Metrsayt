@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hifz Player Pro</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; padding: 15px; margin: 0; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); max-width: 450px; margin: 10px auto; }
+        
+        /* Стилизация выбора файла */
+        .file-input-wrapper { background: #252525; padding: 15px; border-radius: 10px; border: 1px solid #444; margin-bottom: 15px; color: #ddd; }
+        input[type="file"] { color: #fff; width: 100%; cursor: pointer; }
+
+        /* Плеер */
+        audio { width: 100%; margin: 10px 0; background: #333; border-radius: 10px; }
+        
+        /* Кнопки */
+        button { background: #333; border: none; color: white; padding: 12px; margin: 5px; font-size: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:active { background: #555; }
+        .btn-main { background: #00adb5; width: 100%; font-size: 16px; margin-top: 15px; }
+        .btn-capture { background: #ff9800; font-size: 12px; padding: 8px; width: 100%; margin-top: 8px; }
+
+        /* Сетка перемотки */
+        .rewind-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; margin: 10px 0; }
+        
+        /* Контроль скорости */
+        .speed-control { background: #252525; padding: 12px; border-radius: 10px; margin: 15px 0; display: flex; align-items: center; justify-content: space-between; }
+        .speed-control label { font-size: 14px; color: #aaa; }
+        .speed-control input[type="range"] { flex-grow: 1; margin: 0 15px; accent-color: #00adb5; }
+        #speedVal { font-weight: bold; min-width: 40px; color: #00adb5; }
+
+        /* Настройки петли */
+        .loop-settings { display: flex; justify-content: space-between; margin-top: 15px; }
+        .time-group { background: #252525; padding: 12px; border-radius: 10px; width: 47%; box-sizing: border-box; }
+        h4 { margin: 0 0 10px 0; color: #00adb5; font-size: 12px; letter-spacing: 0.5px; }
+        
+        .inputs-container { display: flex; justify-content: space-between; }
+        .input-sub { width: 45%; }
+        .input-sub span { display: block; font-size: 10px; color: #777; margin-top: 2px; }
+        input[type="number"] { background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 5px; width: 100%; text-align: center; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="margin-top:0;">Hifz Player</h2>
+    
+    <div class="file-input-wrapper">
+        <div style="margin-bottom: 8px; font-size: 14px;">Выберите аудиофайл:</div>
+        <input type="file" id="audioFile" accept="audio/*">
+    </div>
+    
+    <audio id="player" controls></audio>
+    
+    <div class="rewind-grid">
+        <button onclick="skip(-10)">-10с</button>
+        <button onclick="skip(-5)">-5с</button>
+        <button onclick="skip(5)">+5с</button>
+        <button onclick="skip(10)">+10с</button>
+    </div>
+
+    <div class="speed-control">
+        <label>Скорость:</label>
+        <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
+        <span id="speedVal">1.0x</span>
+    </div>
+    
+    <div class="loop-settings">
+        <div class="time-group">
+            <h4>НАЧАЛО ПЕТЛИ</h4>
+            <div class="inputs-container">
+                <div class="input-sub">
+                    <input type="number" id="startMin" value="0" min="0">
+                    <span>мин</span>
+                </div>
+                <div class="input-sub">
+                    <input type="number" id="startSec" value="0" min="0" max="59" step="0.1">
+                    <span>сек</span>
+                </div>
+            </div>
+            <button class="btn-capture" id="btnCapStart">⏱ Поймать</button>
+        </div>
+        
+        <div class="time-group">
+            <h4>КОНЕЦ ПЕТЛИ</h4>
+            <div class="inputs-container">
+                <div class="input-sub">
+                    <input type="number" id="endMin" value="0" min="0">
+                    <span>мин</span>
+                </div>
+                <div class="input-sub">
+                    <input type="number" id="endSec" value="10" min="0" max="59" step="0.1">
+                    <span>сек</span>
+                </div>
+            </div>
+            <button class="btn-capture" id="btnCapEnd">⏱ Поймать</button>
+        </div>
+    </div>
+
+    <button class="btn-main" id="btnLoop">ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ</button>
+</div>
+
+<script>
+    const player = document.getElementById('player');
+    const startMin = document.getElementById('startMin'), startSec = document.getElementById('startSec');
+    const endMin = document.getElementById('endMin'), endSec = document.getElementById('endSec');
+    const btnLoop = document.getElementById('btnLoop');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+
+    document.getElementById('audioFile').onchange = e => {
+        if(e.target.files[0]) {
+            player.src = URL.createObjectURL(e.target.files[0]);
+            player.onloadedmetadata = () => { setInputs(player.duration, endMin, endSec); };
+        }
+    };
+
+    function skip(s) { player.currentTime = Math.min(player.duration || 0, Math.max(0, player.currentTime + s)); }
+
+    function setInputs(total, minIn, secIn) {
+        minIn.value = Math.floor(total / 60);
+        secIn.value = (total % 60).toFixed(1);
+    }
+
+    document.getElementById('btnCapStart').onclick = () => setInputs(player.currentTime, startMin, startSec);
+    document.getElementById('btnCapEnd').onclick = () => setInputs(player.currentTime, endMin, endSec);
+
+    // Изменение скорости
+    speedSlider.oninput = () => {
+        const speed = parseFloat(speedSlider.value).toFixed(1);
+        player.playbackRate = speed;
+        speedVal.textContent = speed + 'x';
+    };
+
+    let isLooping = false;
+    btnLoop.onclick = () => {
+        isLooping = !isLooping;
+        btnLoop.textContent = isLooping ? "ВКЛЮЧИТЬ ПОВТОР: ВКЛ" : "ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ";
+        btnLoop.style.background = isLooping ? "#28a745" : "#00adb5";
+        if (isLooping) {
+            let start = (parseInt(startMin.value)||0)*60 + (parseFloat(startSec.value)||0);
+            if (player.currentTime < start) player.currentTime = start;
+            player.play();
+        }
+    };
+
+    player.ontimeupdate = () => {
+        if (isLooping) {
+            let start = (parseInt(startMin.value)||0)*60 + (parseFloat(startSec.value)||0);
+            let end = (parseInt(endMin.value)||0)*60 + (parseFloat(endSec.value)||0);
+            if (player.currentTime >= end || player.currentTime < start) {
+                player.currentTime = start;
+                player.play();
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
