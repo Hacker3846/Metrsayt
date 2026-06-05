@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIFZ — Редактор Караоке Разметки</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --primary: #12513f; /* Глубокий исламский зеленый */
+            --primary-light: #1b6b54; 
+            --accent: #c5a880; /* Благородное матовое золото */
+            --bg: #0b110e; /* Очень темный малахитовый оттенок фона */
+            --card: #141f1a; /* Теплый темный фон для блоков */
+            --text-muted: #8fa099;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+            background: var(--bg); 
+            color: #f0f4f2; 
+            padding: 15px; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        
+        .container { 
+            width: 100%; 
+            max-width: 900px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+        }
+        
+        .card { 
+            background: var(--card); 
+            padding: 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6); 
+            box-sizing: border-box; 
+            border: 1px solid rgba(197, 168, 128, 0.15);
+        }
+        
+        h2 { 
+            color: var(--accent); 
+            margin-top: 0; 
+            text-align: center; 
+            letter-spacing: 0.5px;
+        }
+        
+        select, textarea { 
+            width: 100%; 
+            background: #1a2922; 
+            color: #fff; 
+            border: 1px solid #283e34; 
+            padding: 12px; 
+            border-radius: 10px; 
+            font-size: 15px; 
+            outline: none; 
+            box-sizing: border-box; 
+            transition: 0.2s;
+        }
+        select:focus, textarea:focus { 
+            border-color: var(--accent); 
+            box-shadow: 0 0 5px rgba(197, 168, 128, 0.3);
+        }
+        textarea { height: 100px; resize: vertical; font-size: 16px; }
+
+        .editor-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        @media (max-width: 768px) { .editor-layout { grid-template-columns: 1fr; } }
+
+        /* Элементы плеера */
+        audio { 
+            width: 100%; 
+            background: #1a2922; 
+            border-radius: 12px; 
+            margin-top: 10px; 
+            display: block;
+            filter: invert(1) hue-rotate(140deg) sepia(0.6) saturate(1.2) contrast(0.85);
+        }
+        
+        .hotkeys-info { 
+            font-size: 12px; 
+            color: #cbd6d0; 
+            background: #1a2922; 
+            padding: 12px; 
+            border-radius: 10px; 
+            border-left: 4px solid var(--accent); 
+            margin: 12px 0 0 0; 
+            line-height: 1.4;
+        }
+        
+        /* Кнопки */
+        .btn { 
+            width: 100%; 
+            padding: 14px; 
+            border: 1px solid var(--accent); 
+            border-radius: 12px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            color: var(--accent); 
+            cursor: pointer; 
+            transition: 0.2s; 
+            margin-bottom: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            letter-spacing: 0.5px;
+        }
+        .btn-primary { background: var(--primary); }
+        .btn-accent { background: #967342; color: #fff; border-color: #a88453; }
+        .btn-danger { 
+            background: #5a2525; 
+            border-color: #ff4444; 
+            color: #ff8888; 
+            box-shadow: none;
+        }
+        
+        .btn:active:not(:disabled) {
+            opacity: 0.9;
+        }
+        .btn:disabled { 
+            background: #1a2922; 
+            border-color: #283e34; 
+            color: var(--text-muted); 
+            cursor: not-allowed; 
+            box-shadow: none;
+        }
+
+        /* Сетка режима разметки */
+        .mode-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .mode-btn { 
+            flex: 1; 
+            background: #1a2922; 
+            border: 1px solid #283e34; 
+            color: var(--text-muted); 
+            padding: 10px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 13px; 
+            text-align: center;
+            transition: 0.15s;
+        }
+        .mode-btn.active { 
+            background: var(--primary); 
+            border-color: rgba(197, 168, 128, 0.4); 
+            color: var(--accent); 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Поле визуализации рабочей зоны караоке (ИСПРАВЛЕНО НА СЛЕВА НАПРАВО) */
+        .workspace { 
+            background: #1a2922; 
+            border: 1px solid #283e34; 
+            border-radius: 12px; 
+            padding: 15px; 
+            min-height: 200px; 
+            max-height: 350px; 
+            overflow-y: auto; 
+            text-align: left; 
+            direction: ltr; 
+            font-size: 24px; 
+            line-height: 1.9; 
+            font-family: Georgia, serif;
+        }
+        .chunk { padding: 2px 4px; margin: 0 2px; border-radius: 6px; color: #50675c; transition: 0.12s; display: inline-block; }
+        .chunk.ready { color: var(--text-muted); border-bottom: 2px dashed #283e34; }
+        .chunk.current { color: #141f1a; background: var(--accent); font-weight: bold; box-shadow: 0 0 12px var(--accent); }
+        .chunk.done { color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--accent); }
+
+        .status-text { font-weight: bold; font-size: 14px; margin-top: 5px; color: var(--accent); text-align: center; }
+        .stats { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; direction: ltr; text-align: left;}
+        
+        hr { border: 0; border-top: 1px solid #283e34; margin: 15px 0; }
+        label { color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>HIFZ — Панель Синхронизации Караоке</h2>
+        
+        <label style="font-size: 13px; display:block; margin-bottom:5px;">Выбор суры из базы для разметки:</label>
+        <select id="surahSelect" onchange="selectSurah(this.value)">
+            <option value="">Загрузка списка сур...</option>
+        </select>
+
+        <audio id="adminPlayer" controls></audio>
+        
+        <div class="hotkeys-info">
+            <b>Горячие клавиши управления (когда фокус не в текстовом поле):</b><br>
+            [Пробел] — Старт / Пауза плеера | [Enter] или [Стрелка вправо] — Зафиксировать таймкод элемента | [Ctrl + Z] — Шаг назад
+        </div>
+    </div>
+
+    <div class="editor-layout">
+        <div class="card" style="margin-top:0;">
+            <h3 style="margin-top:0; font-size:16px; color: var(--accent);">Шаг 1: Подготовка Текста</h3>
+            
+            <div class="mode-row">
+                <div id="modeWord" class="mode-btn active" onclick="setSplitMode('word')">По словам (Рекомендуется)</div>
+                <div id="modeChar" class="mode-btn" onclick="setSplitMode('char')">Посимвольно</div>
+            </div>
+
+            <textarea id="rawTextInput" placeholder="Вставьте сюда текст транскрипции (например: Бисмилляхи р-Рахмани р-Рахим)..." oninput="resetWorkspace()"></textarea>
+            
+            <button class="btn btn-primary" id="btnBuild" onclick="buildTokens()">1. Сгенерировать токены разметки</button>
+            <hr>
+            
+            <h3 style="font-size:16px; color: var(--accent);">Шаг 3: Сохранение результатов</h3>
+            <button class="btn btn-accent" id="btnSave" disabled onclick="saveMarkupToFirebase()">💾 Сохранить разметку в БД</button>
+            <div id="statusOutput" class="status-text"></div>
+        </div>
+
+        <div class="card" style="margin-top:0; display: flex; flex-direction: column;">
+            <h3 style="margin-top:0; font-size:16px; color: var(--accent);">Шаг 2: Фиксация Тайминга («Кликер»)</h3>
+            
+            <div class="stats" id="statsDisplay">Элементов: 0 / Текущий индекс: -</div>
+            
+            <div class="workspace" id="workspaceContainer">
+                <p style="font-size:14px; color:var(--text-muted); text-align:center; direction:ltr; margin-top:60px;">Здесь появится текст готовый к разметке после нажатия первой кнопки.</p>
+            </div>
+
+            <div style="margin-top: auto; padding-top: 15px;">
+                <button class="btn btn-accent" id="btnClick" disabled onclick="recordNextTiming()">КЛИК: СЛЕДУЮЩИЙ ЭЛЕМЕНТ (Enter)</button>
+                <button class="btn btn-danger" id="btnUndo" disabled onclick="undoLastTiming()">↩️ Шаг назад (Ctrl+Z)</button>
+                <button class="btn btn-primary" style="background:#1a2922; border-color: #283e34; color: #fff;" onclick="resetTimingProcess()">Сбросить текущую запись</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let allSurahs = [];
+    let selectedSurahId = null;
+    let splitMode = 'word'; 
+    
+    let tokensArray = [];   
+    let timingsArray = [];  
+    let currentIndex = 0;   
+
+    // Компенсация пинга человека (0.65 секунды). Вычитается из таймкода клика, чтобы текст не отставал
+    const audioLagCompensation = 0.65;
+
+    const adminPlayer = document.getElementById('adminPlayer');
+    const statusOutput = document.getElementById('statusOutput');
+
+    function formatSurahName(rawName) {
+        let clean = rawName.trim();
+        let part = "";
+        let partMatch = clean.match(/^\((\d+)\)/);
+        if (partMatch) {
+            part = ` (${partMatch[1]})`;
+            clean = clean.replace(/^\(\d+\)/, "").trim();
+        }
+        let nameMatch = clean.match(/^([^-]+)-(\d+)$/) || clean.match(/^(\d+)-([^-]+)$/);
+        if (nameMatch) {
+            if (isNaN(nameMatch[1])) return `${nameMatch[2]}-${nameMatch[1]}${part}`;
+            else return `${nameMatch[1]}-${nameMatch[2]}${part}`;
+        }
+        return rawName + part;
+    }
+
+    function getSurahNumber(displayName) {
+        let match = displayName.match(/^(\d+)/);
+        return match ? parseInt(match[1]) : 999;
+    }
+
+    database.ref('surahs').on('value', (snap) => {
+        if(!snap.exists()) return;
+        allSurahs = [];
+        snap.forEach((child) => {
+            let structuredName = formatSurahName(child.val().name);
+            allSurahs.push({ id: child.key, name: structuredName, audio: child.val().audio });
+        });
+        allSurahs.sort((a, b) => getSurahNumber(a.name) - getSurahNumber(b.name));
+        renderSelect();
+    });
+
+    function renderSelect() {
+        const select = document.getElementById('surahSelect');
+        select.innerHTML = '<option value="">-- Выберите суру для синхронизации --</option>';
+        allSurahs.forEach(surah => {
+            const opt = document.createElement('option');
+            opt.value = surah.id;
+            opt.textContent = surah.name;
+            select.appendChild(opt);
+        });
+    }
+
+    function selectSurah(id) {
+        if(!id) return;
+        selectedSurahId = id;
+        const track = allSurahs.find(s => s.id === id);
+        if(track) {
+            adminPlayer.src = track.audio;
+            statusOutput.textContent = "Аудио загружено. Вставьте текст и сгенерируйте токены.";
+            
+            database.ref('surahs/' + id + '/markup').get().then(snap => {
+                if (snap.exists() && snap.val().text) {
+                    if(confirm("Для этой суры уже есть разметка в базе. Загрузить её для редактирования?")) {
+                        document.getElementById('rawTextInput').value = snap.val().text;
+                        statusOutput.textContent = "Загружена существующая разметка из базы данных.";
+                        buildTokens(snap.val().timings);
+                    }
+                }
+            });
+        }
+    }
+
+    function setSplitMode(mode) {
+        splitMode = mode;
+        document.getElementById('modeWord').classList.toggle('active', mode === 'word');
+        document.getElementById('modeChar').classList.toggle('active', mode === 'char');
+        resetWorkspace();
+    }
+
+    function resetWorkspace() {
+        tokensArray = [];
+        timingsArray = [];
+        currentIndex = 0;
+        document.getElementById('workspaceContainer').innerHTML = `<p style="font-size:14px; color:var(--text-muted); text-align:center; direction:ltr; margin-top:60px;">Требуется заново сгенерировать токены.</p>`;
+        document.getElementById('btnClick').disabled = true;
+        document.getElementById('btnUndo').disabled = true;
+        document.getElementById('btnSave').disabled = true;
+        updateStats();
+    }
+
+    function buildTokens(existingTimings = null) {
+        const text = document.getElementById('rawTextInput').value.trim();
+        if(!text) { alert("Сначала введите текст транскрипции!"); return; }
+        if(!selectedSurahId) { alert("Сначала выберите суру из списка!"); return; }
+
+        if (splitMode === 'word') {
+            tokensArray = text.split(/\s+/);
+        } else {
+            tokensArray = text.split('');
+        }
+
+        timingsArray = new Array(tokensArray.length).fill(null);
+        currentIndex = 0;
+
+        if (existingTimings && existingTimings.length === timingsArray.length) {
+            timingsArray = [...existingTimings];
+            let nextEmpty = timingsArray.findIndex(t => t === null || t === undefined);
+            currentIndex = nextEmpty !== -1 ? nextEmpty : timingsArray.length;
+        }
+
+        renderWorkspace();
+        document.getElementById('btnClick').disabled = (currentIndex >= tokensArray.length);
+        document.getElementById('btnUndo').disabled = (currentIndex === 0);
+        document.getElementById('btnSave').disabled = false;
+        updateStats();
+    }
+
+    function renderWorkspace() {
+        const container = document.getElementById('workspaceContainer');
+        container.innerHTML = "";
+
+        tokensArray.forEach((token, idx) => {
+            const span = document.createElement('span');
+            span.className = 'chunk';
+            span.textContent = splitMode === 'word' ? token + ' ' : token;
+            span.setAttribute('data-editor-idx', idx);
+
+            if (idx === currentIndex) {
+                span.classList.add('current');
+            } else if (timingsArray[idx] !== null && timingsArray[idx] !== undefined) {
+                span.classList.add('done');
+            } else {
+                span.classList.add('ready');
+            }
+
+            span.onclick = () => {
+                if(timingsArray[idx] !== null) {
+                    adminPlayer.currentTime = timingsArray[idx];
+                }
+            };
+
+            container.appendChild(span);
+        });
+
+        const currentSpan = container.querySelector('.current');
+        if (currentSpan) {
+            currentSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function updateStats() {
+        const display = document.getElementById('statsDisplay');
+        if(tokensArray.length === 0) {
+            display.textContent = "Элементов: 0 / Текущий индекс: -";
+            return;
+        }
+        display.textContent = `Всего элементов: ${tokensArray.length} | Размечено: ${currentIndex} | Осталось: ${tokensArray.length - currentIndex}`;
+    }
+
+    function recordNextTiming() {
+        if (currentIndex >= tokensArray.length) return;
+
+        // Вычитаем компенсацию задержки, но следим, чтобы время не ушло меньше нуля
+        let calculatedTime = adminPlayer.currentTime - audioLagCompensation;
+        if (calculatedTime < 0) calculatedTime = 0;
+
+        timingsArray[currentIndex] = parseFloat(calculatedTime.toFixed(3));
+        currentIndex++;
+        
+        renderWorkspace();
+        updateStats();
+
+        document.getElementById('btnUndo').disabled = false;
+        if (currentIndex >= tokensArray.length) {
+            document.getElementById('btnClick').disabled = true;
+            statusOutput.textContent = "Разметка завершена! Проверьте результат и сохраните в базу.";
+        }
+    }
+
+    function undoLastTiming() {
+        if (currentIndex === 0) return;
+
+        currentIndex--;
+        timingsArray[currentIndex] = null;
+        adminPlayer.currentTime = Math.max(0, adminPlayer.currentTime - 1.2);
+
+        renderWorkspace();
+        updateStats();
+
+        document.getElementById('btnClick').disabled = false;
+        if (currentIndex === 0) {
+            document.getElementById('btnUndo').disabled = true;
+        }
+    }
+
+    function resetTimingProcess() {
+        if(confirm("Вы уверены, что хотите сбросить текущие таймкоды этой сессии и начать кликать заново?")) {
+            timingsArray.fill(null);
+            currentIndex = 0;
+            renderWorkspace();
+            updateStats();
+            document.getElementById('btnClick').disabled = false;
+            document.getElementById('btnUndo').disabled = true;
+        }
+    }
+
+    function saveMarkupToFirebase() {
+        if (!selectedSurahId) return;
+        
+        let finalText = "";
+        if (splitMode === 'word') {
+            finalText = tokensArray.join(' ');
+        } else {
+            finalText = tokensArray.join('');
+        }
+
+        statusOutput.textContent = "Сохранение разметки в Firebase...";
+
+        database.ref('surahs/' + selectedSurahId + '/markup').set({
+            text: finalText,
+            timings: timingsArray
+        }).then(() => {
+            statusOutput.textContent = "🎉 Разметка караоке успешно сохранена в базу данных!";
+            alert("Успешно сохранено!");
+        }).catch(err => {
+            statusOutput.textContent = "Ошибка при сохранении.";
+            alert("Ошибка: " + err.message);
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') {
+            return;
+        }
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (adminPlayer.paused) adminPlayer.play();
+            else adminPlayer.pause();
+        }
+        if (e.code === 'Enter' || e.code === 'ArrowRight') {
+            e.preventDefault();
+            recordNextTiming();
+        }
+        if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            undoLastTiming();
+        }
+    });
+</script>
+</body>
+</html>
+
