@@ -8,11 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { 
-            --primary: #12513f; /* Глубокий исламский зеленый */
+            --primary: #12513f; 
             --primary-light: #1b6b54; 
-            --accent: #c5a880; /* Благородное матовое золото */
-            --bg: #0b110e; /* Очень темный малахитовый оттенок фона */
-            --card: #141f1a; /* Теплый темный фон для блоков */
+            --accent: #c5a880; 
+            --bg: #0b110e; 
+            --card: #141f1a; 
             --text-muted: #8fa099;
         }
         
@@ -169,6 +169,25 @@
         
         hr { border: 0; border-top: 1px solid #283e34; margin: 15px 0; }
         label { color: var(--text-muted); }
+
+        /* Новые стили для зоны перетаскивания */
+        .drop-zone {
+            border: 2px dashed #283e34;
+            border-radius: 12px;
+            padding: 20px 10px;
+            text-align: center;
+            color: var(--text-muted);
+            background: #1a2922;
+            transition: 0.2s;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(197, 168, 128, 0.1);
+            color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -205,7 +224,15 @@
             <hr>
             
             <h3 style="font-size:16px; color: var(--accent);">Шаг 3: Сохранение результатов</h3>
-            <button class="btn btn-accent" id="btnSave" disabled onclick="saveMarkupToFirebase()">💾 Сохранить разметку в БД</button>
+            <button class="btn btn-accent" id="btnSave" disabled onclick="saveMarkupToFirebase()">💾 Сохранить в БД</button>
+            <button class="btn" style="background:#1a2922; border-color:var(--accent); color:var(--accent);" id="btnExport" disabled onclick="exportToFile()">📥 Скачать файл разметки</button>
+            
+            <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+                📂 <b>Загрузить разметку</b><br>Перетащите файл сюда или кликните<br>
+                <span style="font-size:12px; opacity:0.8;">(Формат: (часть)название-номер_чтец)</span>
+            </div>
+            <input type="file" id="fileInput" style="display:none" accept=".json" onchange="handleFiles(this.files)">
+
             <div id="statusOutput" class="status-text"></div>
         </div>
 
@@ -295,10 +322,14 @@
                 displayUiName += ` — часть ${part}`;
             }
 
+            // Добавлены отдельные поля для корректного названия файла
             allSurahs.push({ 
                 id: trackId, 
                 name: displayUiName, 
                 surahNum: parseInt(sNum),
+                surahName: sName,
+                reader: reader,
+                part: part,
                 audio: val.audio 
             });
         });
@@ -323,24 +354,32 @@
         }
     }
 
-    function selectSurah(id) {
+    // Изменена функция для поддержки загрузки локальных данных напрямую
+    function selectSurah(id, localData = null) {
         if(!id) return;
         selectedSurahId = id;
         const track = allSurahs.find(s => s.id === id);
         if(track) {
             adminPlayer.src = track.audio;
-            statusOutput.textContent = "Аудиозапись загружена. Вставьте текст транскрипции.";
             
-            // Проверка наличия уже сохраненной разметки
-            database.ref('surahs/' + id + '/markup').get().then(snap => {
-                if (snap.exists() && snap.val().text) {
-                    if(confirm("Для этой аудиозаписи в базе уже есть разметка. Загрузить её для редактирования?")) {
-                        document.getElementById('rawTextInput').value = snap.val().text;
-                        statusOutput.textContent = "Загружена существующая разметка из базы данных.";
-                        buildTokens(snap.val().timings);
+            if(localData) {
+                statusOutput.textContent = "Аудиозапись загружена. Разметка применена из локального файла.";
+                document.getElementById('rawTextInput').value = localData.text;
+                if(localData.splitMode) setSplitMode(localData.splitMode);
+                buildTokens(localData.timings);
+            } else {
+                statusOutput.textContent = "Аудиозапись загружена. Вставьте текст транскрипции.";
+                // Проверка наличия уже сохраненной разметки
+                database.ref('surahs/' + id + '/markup').get().then(snap => {
+                    if (snap.exists() && snap.val().text) {
+                        if(confirm("Для этой аудиозаписи в базе уже есть разметка. Загрузить её для редактирования?")) {
+                            document.getElementById('rawTextInput').value = snap.val().text;
+                            statusOutput.textContent = "Загружена существующая разметка из базы данных.";
+                            buildTokens(snap.val().timings);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
@@ -359,6 +398,7 @@
         document.getElementById('btnClick').disabled = true;
         document.getElementById('btnUndo').disabled = true;
         document.getElementById('btnSave').disabled = true;
+        document.getElementById('btnExport').disabled = true;
         updateStats();
     }
 
@@ -386,6 +426,7 @@
         document.getElementById('btnClick').disabled = (currentIndex >= tokensArray.length);
         document.getElementById('btnUndo').disabled = (currentIndex === 0);
         document.getElementById('btnSave').disabled = false;
+        document.getElementById('btnExport').disabled = false;
         updateStats();
     }
 
@@ -481,7 +522,6 @@
         if (!selectedSurahId) return;
         
         let finalText = (splitMode === 'word') ? tokensArray.join(' ') : tokensArray.join('');
-
         statusOutput.textContent = "Сохранение разметки в Firebase...";
 
         database.ref('surahs/' + selectedSurahId + '/markup').set({
@@ -494,6 +534,102 @@
             statusOutput.textContent = "Ошибка при сохранении.";
             alert("Ошибка: " + err.message);
         });
+    }
+
+    // НОВАЯ ФУНКЦИЯ: ЭКСПОРТ В ЛОКАЛЬНЫЙ ФАЙЛ
+    function exportToFile() {
+        if (!selectedSurahId) return;
+        
+        const track = allSurahs.find(s => s.id === selectedSurahId);
+        const textToSave = document.getElementById('rawTextInput').value.trim();
+        
+        const data = {
+            surahId: selectedSurahId,
+            text: textToSave,
+            timings: timingsArray,
+            splitMode: splitMode
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        
+        // Формат названия: (часть)название-номер_чтец.json
+        const partStr = track.part > 0 ? `(${track.part})` : `(1)`;
+        const safeName = track.surahName.replace(/[/\\?%*:|"<>]/g, ''); // очистка недопустимых символов
+        const safeReader = track.reader.replace(/[/\\?%*:|"<>]/g, '');
+        
+        const filename = `${partStr}${safeName}-${track.surahNum}_${safeReader}.json`;
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        statusOutput.textContent = "📥 Локальный файл успешно скачан!";
+    }
+
+    // НОВЫЕ ФУНКЦИИ: ЗАГРУЗКА ИЗ ФАЙЛА (DRAG & DROP)
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length) {
+            const file = files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    processImportedData(data, file.name);
+                } catch (err) {
+                    alert("Ошибка чтения файла! Убедитесь, что это правильный JSON формат разметки.");
+                }
+            };
+            reader.readAsText(file);
+        }
+    }
+
+    function processImportedData(data, filename) {
+        let targetSurahId = null;
+
+        // Вариант 1: Ищем по скрытому ID (самый надежный)
+        if (data.surahId && allSurahs.some(s => s.id === data.surahId)) {
+            targetSurahId = data.surahId;
+        } else {
+            // Вариант 2: Пытаемся распарсить ваше название (часть)название-номер_чтец
+            // Пример: (1)АльА'ля-87_Арби.json
+            const match = filename.match(/^\((\d+)\)(.+?)-(\d+)_([^.]+)\.json$/);
+            if (match) {
+                const pPart = parseInt(match[1]);
+                const pNum = parseInt(match[3]);
+                
+                // Ищем суру, у которой совпадает номер и часть
+                const matched = allSurahs.find(s => s.surahNum === pNum && s.part === pPart);
+                if (matched) targetSurahId = matched.id;
+            }
+        }
+
+        if (targetSurahId) {
+            document.getElementById('surahSelect').value = targetSurahId;
+            selectSurah(targetSurahId, data);
+        } else {
+            alert(`В базе данных не найдена аудиозапись для файла: ${filename}. Выберите суру в базе вручную, чтобы загрузить данные в неё.`);
+        }
     }
 
     window.addEventListener('keydown', (e) => {

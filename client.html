@@ -3,157 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HIFZ — Заучивание Корана</title>
+    <title>HIFZ — Заучивание Корана (CDN Версия)</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { 
-            --primary: #12513f; 
-            --primary-light: #1b6b54; 
-            --accent: #c5a880; 
-            --bg: #0b110e; 
-            --card: #141f1a; 
-            --text-muted: #8fa099;
+            --primary: #12513f; --primary-light: #1b6b54; 
+            --accent: #c5a880; --bg: #0b110e; 
+            --card: #141f1a; --text-muted: #8fa099;
         }
         
         body { 
             font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
-            background: var(--bg); 
-            color: #f0f4f2; 
-            margin: 0; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
+            background: var(--bg); color: #f0f4f2; margin: 0; padding: 15px; 
+            display: flex; flex-direction: column; align-items: center; 
         }
         
         .container { 
-            width: 100%; 
-            max-width: 600px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            min-height: 100vh; 
-            padding-bottom: 50px;
-            box-sizing: border-box;
+            width: 100%; max-width: 600px; display: flex; flex-direction: column; 
+            gap: 15px; min-height: 100vh; padding-bottom: 50px; box-sizing: border-box;
         }
         
         .player-card { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 20px; 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6); 
-            text-align: center;
+            background: var(--card); padding: 20px; border-radius: 20px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6); text-align: center;
             border: 1px solid rgba(197, 168, 128, 0.15);
         }
         
         .track-title { font-size: 20px; font-weight: bold; margin-bottom: 12px; color: var(--accent); letter-spacing: 0.5px; }
 
         .surah-select-main {
-            font-size: 18px !important;
-            font-weight: bold;
-            border: 2px solid var(--accent) !important;
-            color: var(--accent) !important;
-            background: #1a2922 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            font-size: 18px !important; font-weight: bold; border: 2px solid var(--accent) !important;
+            color: var(--accent) !important; background: #1a2922 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
 
         .single-reader-box {
-            background: #1a2922;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #283e34;
-            color: var(--accent);
-            font-size: 15px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            text-align: center;
+            background: #1a2922; padding: 12px; border-radius: 10px; border: 1px solid #283e34;
+            color: var(--accent); font-size: 15px; margin-bottom: 10px; font-weight: bold; text-align: center;
         }
 
         .live-sticky-container {
-            position: sticky;
-            top: 0;
-            z-index: 1005;
-            background: var(--bg);
-            padding: 10px 0;
-            width: 100%;
-            box-sizing: border-box;
-            transition: all 0.2s ease;
+            position: sticky; top: 0; z-index: 1005; background: var(--bg);
+            padding: 10px 0; width: 100%; box-sizing: border-box; transition: all 0.2s ease;
         }
 
         .live-sticky-inner {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 16px;
-            border: 1px solid rgba(197, 168, 128, 0.15);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
+            background: var(--card); padding: 15px; border-radius: 16px;
+            border: 1px solid rgba(197, 168, 128, 0.15); box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s ease;
         }
 
         .live-sticky-container audio { 
-            width: 100%; 
-            background: #1a2922; 
-            border-radius: 12px; 
-            display: block;
+            width: 100%; background: #1a2922; border-radius: 12px; display: block;
             filter: invert(1) hue-rotate(140deg) sepia(0.6) saturate(1.2) contrast(0.85);
         }
 
         .rewind-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin: 12px 0 0 0; }
         .rewind-grid button { 
-            background: #1a2922; 
-            border: 1px solid #283e34; 
-            color: #f0f4f2; 
-            padding: 10px; 
-            font-size: 13px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: 0.15s;
+            background: #1a2922; border: 1px solid #283e34; color: #f0f4f2; 
+            padding: 10px; font-size: 13px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.15s;
         }
         .rewind-grid button:active { background: var(--primary); border-color: var(--accent); color: var(--accent); }
 
         .live-sticky-container.sticky-active .live-sticky-inner {
-            background: #141f1a;
-            border-color: rgba(197, 168, 128, 0.4);
-            border-radius: 0 0 16px 16px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+            background: #141f1a; border-color: rgba(197, 168, 128, 0.4);
+            border-radius: 0 0 16px 16px; box-shadow: 0 12px 30px rgba(0,0,0,0.8);
         }
 
         .controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
         .search-input { 
-            flex: 1; 
-            background: #1a2922; 
-            color: #fff; 
-            border: 1px solid #283e34; 
-            padding: 10px 14px; 
-            border-radius: 10px; 
-            font-size: 14px; 
-            outline: none; 
-            transition: 0.2s;
+            flex: 1; background: #1a2922; color: #fff; border: 1px solid #283e34; 
+            padding: 10px 14px; border-radius: 10px; font-size: 14px; outline: none; transition: 0.2s;
         }
         .search-input:focus { border-color: var(--accent); box-shadow: 0 0 5px rgba(197, 168, 128, 0.3); }
         .btn-sort { 
-            background: var(--primary); 
-            border: 1px solid var(--accent); 
-            color: var(--accent); 
-            padding: 10px 14px; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-size: 13px; 
-            font-weight: bold; 
-            white-space: nowrap; 
-            min-width: 85px; 
+            background: var(--primary); border: 1px solid var(--accent); color: var(--accent); 
+            padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap; min-width: 85px; 
         }
         select { 
-            width: 100%; 
-            background: #1a2922; 
-            color: #fff; 
-            border: 1px solid #283e34; 
-            padding: 12px; 
-            border-radius: 10px; 
-            font-size: 15px; 
-            outline: none; 
-            margin-bottom: 12px; 
+            width: 100%; background: #1a2922; color: #fff; border: 1px solid #283e34; 
+            padding: 12px; border-radius: 10px; font-size: 15px; outline: none; margin-bottom: 12px; 
         }
 
         .speed-control { background: #1a2922; padding: 10px 14px; border-radius: 10px; margin: 12px 0; display: flex; align-items: center; justify-content: space-between; }
@@ -186,20 +114,14 @@
 
         .karaoke-box { text-align: left; direction: ltr; font-size: 24px; line-height: 1.9; word-break: break-word; font-family: Georgia, serif; }
         .char-span { padding: 2px 4px; cursor: pointer; border-radius: 6px; color: #758c81; transition: background 0.12s, color 0.12s; display: inline-block; margin-bottom: 4px; }
-        .char-span.highlight { 
-    color: #17241f; background: var(--accent); box-shadow: 0 0 12px var(--accent); text-shadow: 1.5px 0 0 #141f1a; /* Имитация жирности без сдвига текста */}
+        .char-span.highlight { color: #17241f; background: var(--accent); box-shadow: 0 0 12px var(--accent); text-shadow: 1.5px 0 0 #141f1a; }
 
         .translation-box { text-align: left; font-size: 16px; line-height: 1.6; color: #d0dad5; white-space: pre-line; }
 
         .hadith-card { 
-            background: linear-gradient(135deg, #10211a, var(--card)); 
-            padding: 18px; 
-            border-radius: 16px; 
-            box-shadow: 0 6px 15px rgba(0,0,0,0.5); 
-            text-align: left; 
-            border-left: 4px solid var(--accent); 
-            border-top: 1px solid rgba(197, 168, 128, 0.1);
-            margin-top: 5px;
+            background: linear-gradient(135deg, #10211a, var(--card)); padding: 18px; border-radius: 16px; 
+            box-shadow: 0 6px 15px rgba(0,0,0,0.5); text-align: left; 
+            border-left: 4px solid var(--accent); border-top: 1px solid rgba(197, 168, 128, 0.1); margin-top: 5px;
         }
         .hadith-title { font-size: 11px; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }
         .hadith-text { font-size: 14px; line-height: 1.5; color: #cbd6d0; font-style: italic; }
@@ -234,7 +156,7 @@
 
     <div class="live-sticky-container" id="liveStickyContainer">
         <div class="live-sticky-inner">
-            <audio id="mainPlayer" controls></audio>
+            <audio id="mainPlayer" controls preload="none"></audio>
             <div class="rewind-grid">
                 <button onclick="skip(-10)">-10с</button>
                 <button onclick="skip(-5)">-5с</button>
@@ -318,6 +240,23 @@
 </div>
 
 <script>
+    const CDN_AUDIO_URL = "https://your-github-username.github.io/your-repo-name/audio/";
+
+    const SURAHS_BASE = {
+        1: "Аль-Фатиха", 2: "Аль-Бакара", 3: "Али Имран", 4: "Ан-Ниса", 5: "Аль-Маида", 6: "Аль-Анам", 7: "Аль-Араф", 8: "Аль-Анфаль", 9: "Ат-Тауба", 10: "Юнус",
+        11: "Худ", 12: "Юсуф", 13: "Ар-Раад", 14: "Ибрахим", 15: "Аль-Хиджр", 16: "Ан-Нахль", 17: "Аль-Исра", 18: "Аль-Кахф", 19: "Марьям", 20: "Та Ха",
+        21: "Аль-Анбия", 22: "Аль-Хаджж", 23: "Аль-Муминун", 24: "Ан-Нур", 25: "Аль-Фуркан", 26: "Аш-Шуара", 27: "Ан-Намль", 28: "Аль-Касас", 29: "Аль-Анкабут", 30: "Ар-Рум",
+        31: "Лукман", 32: "Ас-Саджда", 33: "Аль-Ахзаб", 34: "Саба", 35: "Фатыр", 36: "Йа Син", 37: "Ас-Саффат", 38: "Сад", 39: "Аз-Зумар", 40: "Гафир",
+        41: "Фуссилят", 42: "Аш-Шура", 43: "Аз-Зухруф", 44: "Ад-Духан", 45: "Аль-Джасия", 46: "Аль-Ахкаф", 47: "Мухаммад", 48: "Аль-Фатх", 49: "Аль-Худжурат", 50: "Каф",
+        51: "Аз-Зарият", 52: "Ат-Тур", 53: "Ан-Наджм", 54: "Аль-Камар", 55: "Ар-Рахман", 56: "Аль-Вакиа", 57: "Аль-Хадид", 58: "Аль-Муджадала", 59: "Аль-Хашр", 60: "Аль-Мумтахана",
+        61: "Ас-Сафф", 62: "Аль-Джумуа", 63: "Аль-Мунафикун", 64: "Ат-Тагабун", 65: "Ат-Талак", 66: "Ат-Тахрим", 67: "Аль-Мульк", 68: "Аль-Калам", 69: "Аль-Хакка", 70: "Аль-Мааридж",
+        71: "Нух", 72: "Аль-Джинн", 73: "Аль-Муззаммиль", 74: "Аль-Муддассир", 75: "Аль-Кыяма", 76: "Аль-Инсан", 77: "Аль-Мурсалят", 78: "Ан-Наба", 79: "Ан-Назиат", 80: "Абаса",
+        81: "Ат-Таквир", 82: "Аль-Инфитар", 83: "Аль-Мутаффифин", 84: "Аль-Иншикак", 85: "Аль-Бурудж", 86: "Ат-Тарик", 87: "Аль-Аля", 88: "Аль-Гашия", 89: "Аль-Фаджр", 90: "Аль-Балад",
+        91: "Аш-Шамс", 92: "Аль-Лайл", 93: "Ад-Духа", 94: "Аш-Шарх", 95: "Ат-Тин", 96: "Аль-Аляк", 97: "Аль-Кадр", 98: "Аль-Баййина", 99: "Аз-Залзала", 100: "Аль-Адият",
+        101: "Аль-Кариа", 102: "Ат-Такасур", 103: "Аль-Аср", 104: "Аль-Хумаза", 105: "Аль-Филь", 106: "Курайш", 107: "Аль-Маун", 108: "Аль-Каусар", 109: "Аль-Кафирун", 110: "Ан-Наср",
+        111: "Аль-Масад", 112: "Аль-Ихлас", 113: "Аль-Фалак", 114: "Ан-Нас"
+    };
+
     const firebaseConfig = { databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
@@ -332,6 +271,7 @@
     let initialProgressApplied = false;
     let currentActiveTab = 0;
     let clientSpansCache = [];
+    let pendingStartTime = 0;
 
     let selectedSurahNum = null;
     let selectedReaderName = null;
@@ -342,6 +282,18 @@
     const startMin = document.getElementById('startMin'), startSec = document.getElementById('startSec');
     const endMin = document.getElementById('endMin'), endSec = document.getElementById('endSec');
     const btnLoop = document.getElementById('btnLoop');
+
+    function parseOpusFileName(filename) {
+        if (!filename) return { surahNum: 1, part: 0, reader: "Общий" };
+        let clean = filename.replace(/\.opus$/i, "").trim();
+        let surahMatch = clean.match(/^0*(\d+)/);
+        let surahNum = surahMatch ? parseInt(surahMatch[1]) : 1;
+        let partMatch = clean.match(/-(\d+)/);
+        let partNum = partMatch ? parseInt(partMatch[1]) : 0;
+        let readerMatch = clean.match(/_(.+)$/);
+        let readerName = readerMatch ? readerMatch[1].trim() : "Общий";
+        return { surahNum, part: partNum, reader: readerName };
+    }
 
     window.addEventListener('scroll', () => {
         if (liveStickyContainer.getBoundingClientRect().top <= 1) {
@@ -369,39 +321,21 @@
             const val = child.val();
             const trackId = child.key;
 
-            let sNum = val.surahNum;
-            let sName = val.surahName;
-            let reader = val.reader;
-            let part = val.part !== undefined ? val.part : 0;
+            let fileName = val.fileName || trackId + ".opus";
+            let parsed = parseOpusFileName(fileName);
 
-            if(!sNum || !sName) {
-                let clean = (val.name || trackId).trim();
-                let partMatch = clean.match(/^\((\d+)\)/);
-                if (partMatch) {
-                    part = parseInt(partMatch[1]);
-                    clean = clean.replace(/^\(\d+\)/, "").trim();
-                }
-                if (clean.includes('_')) {
-                    let parts = clean.split('_');
-                    reader = parts[1];
-                    clean = parts[0];
-                }
-                let numMatch = clean.match(/-(\d+)$/) || clean.match(/^(\d+)-/);
-                if (numMatch) {
-                    sNum = parseInt(numMatch[1]);
-                    sName = clean.replace(numMatch[0], "").replace(/^-|-$/, "").trim();
-                } else {
-                    sNum = parseInt(clean.match(/\d+/)) || 999;
-                    sName = clean.replace(/\d+/g, "").trim() || "Сура";
-                }
-            }
-
-            if (reader) reader = reader.replace(/^(Чтец:\s*|Чтец_)/i, "").trim();
-            else reader = "Общий";
+            let sNum = val.surahNum || parsed.surahNum;
+            let sName = SURAHS_BASE[sNum] || "Неизвестная Сура";
+            let reader = val.reader || parsed.reader;
+            let part = val.part !== undefined ? val.part : parsed.part;
 
             dbTracks.push({
-                id: trackId, surahNum: parseInt(sNum), surahName: sName,
-                reader: reader, part: parseInt(part), audio: val.audio
+                id: trackId, 
+                surahNum: parseInt(sNum), 
+                surahName: sName,
+                reader: reader, 
+                part: parseInt(part), 
+                fileName: fileName
             });
         });
 
@@ -543,7 +477,7 @@
 
     function executeFinalTrackSelection(trackId) {
         selectedTrackId = trackId;
-        loadTrackPlayback(trackId, 0, true);
+        loadTrackPlayback(trackId, 0, false);
     }
 
     function hideCascadeBlocks() {
@@ -570,12 +504,23 @@
         btnLoop.style.background = "#12513f"; 
         btnLoop.style.borderColor = "#c5a880";
 
-        mainPlayer.src = track.audio;
-        mainPlayer.currentTime = startTime;
+        pendingStartTime = startTime;
+        mainPlayer.src = CDN_AUDIO_URL + track.fileName;
+        
         mainPlayer.onloadedmetadata = () => {
-            if (startTime === 0) setInputs(mainPlayer.duration, endMin, endSec);
-            if (autoplay) mainPlayer.play();
+            if (pendingStartTime === 0) setInputs(mainPlayer.duration, endMin, endSec);
         };
+
+        mainPlayer.onplay = () => {
+            if (pendingStartTime > 0) {
+                mainPlayer.currentTime = pendingStartTime;
+                pendingStartTime = 0;
+            }
+        };
+
+        if (autoplay) {
+            mainPlayer.play().catch(e => console.log("Браузер заблокировал автоплей: ", e));
+        }
 
         localStorage.setItem('hifz_last_surah', id);
         loadMushafImages(track.surahNum);
@@ -601,7 +546,6 @@
         });
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ КАРАОКЕ
     function loadKaraokeMarkup(trackId) {
         const container = document.getElementById('karaokeContainer');
         container.innerHTML = "<p style='text-align:center; color:var(--text-muted); font-size:14px;'>Загрузка временных меток...</p>";
@@ -618,7 +562,6 @@
             const data = snap.val();
             let rawTimings = data.timings || [];
             
-            // Нормализация массива: если Firebase вернул "дырявый" массив как объект, превращаем обратно в настоящий массив
             let safeTimingsArray = [];
             if (Array.isArray(rawTimings)) {
                 safeTimingsArray = rawTimings;
@@ -635,7 +578,6 @@
             };
 
             let cleanText = currentMarkup.text.trim();
-            // Надежное разбиение текста: по пробелам, если они есть
             let tokens = cleanText.includes(' ') ? cleanText.split(/\s+/) : cleanText.split('');
             
             tokens.forEach((token, idx) => {
@@ -647,6 +589,7 @@
                 span.onclick = () => {
                     if(currentMarkup.timings[idx] !== undefined && currentMarkup.timings[idx] !== null) {
                         mainPlayer.currentTime = Number(currentMarkup.timings[idx]);
+                        if(mainPlayer.paused) mainPlayer.play();
                     }
                 };
                 container.appendChild(span);
@@ -691,7 +634,6 @@
         }
     }
 
-    // ИСПРАВЛЕННАЯ ЛОГИКА СИНХРОНИЗАЦИИ ВОСПРОИЗВЕДЕНИЯ КАРАОКЕ
     mainPlayer.addEventListener('timeupdate', () => {
         const currentTime = mainPlayer.currentTime;
 
@@ -719,7 +661,6 @@
 
             const startTime = timings[i];
             
-            // Умный расчет окончания слова: ищем следующее существующее слово, даже если пропущено несколько
             let endTime = duration;
             for (let j = i + 1; j < timings.length; j++) {
                 if (timings[j] !== null && timings[j] !== undefined) {

@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HIFZ — Центральная Панель Администратора</title>
+    <title>HIFZ — Центральная Панель Администратора (CDN Версия)</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root { 
-            --primary: #12513f; /* Глубокий исламский зеленый */
+            --primary: #12513f; 
             --primary-light: #1b6b54; 
-            --accent: #c5a880; /* Благородное матовое золото */
-            --bg: #0b110e; /* Очень темный малахитовый оттенок фона */
-            --card: #141f1a; /* Теплый темный фон для блоков */
+            --accent: #c5a880; 
+            --bg: #0b110e; 
+            --card: #141f1a; 
             --text-muted: #8fa099;
         }
         
@@ -28,213 +28,73 @@
             align-items: center; 
         }
         
-        .admin-container { 
-            width: 100%; 
-            max-width: 900px; 
-        }
+        .admin-container { width: 100%; max-width: 900px; }
         
-        h2 {
-            color: var(--accent);
-            text-align: center;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin-top: 0;
-            font-size: 18px;
-            letter-spacing: 0.5px;
-        }
+        h2 { color: var(--accent); text-align: center; letter-spacing: 1px; margin-bottom: 20px; }
+        h3 { color: var(--accent); margin-top: 0; font-size: 18px; letter-spacing: 0.5px; }
         
         .card { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 20px; 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6); 
-            box-sizing: border-box; 
-            margin-top: 10px; 
-            border: 1px solid rgba(197, 168, 128, 0.15);
+            background: var(--card); padding: 20px; border-radius: 20px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6); box-sizing: border-box; 
+            margin-top: 10px; border: 1px solid rgba(197, 168, 128, 0.15);
         }
         
         .admin-tabs { 
-            display: flex; 
-            flex-wrap: wrap; 
-            background: #1a2922; 
-            border-radius: 12px; 
-            padding: 5px; 
-            gap: 5px; 
-            margin-bottom: 15px; 
+            display: flex; flex-wrap: wrap; background: #1a2922; 
+            border-radius: 12px; padding: 5px; gap: 5px; margin-bottom: 15px; 
             border: 1px solid #283e34;
         }
         
         .admin-tab-btn { 
-            flex: 1; 
-            min-width: 130px; 
-            background: none; 
-            border: none; 
-            color: var(--text-muted); 
-            padding: 12px; 
-            font-weight: bold; 
-            font-size: 13px; 
-            cursor: pointer; 
-            border-radius: 8px; 
-            text-align: center; 
-            transition: 0.2s; 
+            flex: 1; min-width: 130px; background: none; border: none; 
+            color: var(--text-muted); padding: 12px; font-weight: bold; 
+            font-size: 13px; cursor: pointer; border-radius: 8px; text-align: center; transition: 0.2s; 
         }
         
         .admin-tab-btn.active { 
-            background: var(--primary); 
-            color: var(--accent); 
-            border: 1px solid rgba(197, 168, 128, 0.4);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            background: var(--primary); color: var(--accent); 
+            border: 1px solid rgba(197, 168, 128, 0.4); box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
         }
         
         .panel-content { display: none; }
         .panel-content.active { display: block; }
 
         .drop-zone { 
-            border: 2px dashed var(--accent); 
-            padding: 30px 20px; 
-            border-radius: 12px; 
-            background: #1a2922; 
-            cursor: pointer; 
-            margin: 15px 0; 
-            text-align: center; 
-            transition: 0.3s; 
+            border: 2px dashed var(--accent); padding: 30px 20px; 
+            border-radius: 12px; background: #1a2922; cursor: pointer; 
+            margin: 15px 0; text-align: center; transition: 0.3s; 
         }
         
-        .drop-zone.hover { 
-            background: var(--primary); 
-            border-color: var(--accent); 
-        }
-        
-        .drop-zone p { 
-            margin: 0; 
-            font-size: 15px; 
-            font-weight: bold; 
-            color: var(--accent); 
-        }
-        
+        .drop-zone.hover { background: var(--primary); border-color: var(--accent); }
+        .drop-zone p { margin: 0; font-size: 15px; font-weight: bold; color: var(--accent); }
         .drop-zone.hover p { color: #fff; }
         
         input[type="number"], input[type="text"], textarea { 
-            width: 100%; 
-            background: #1a2922; 
-            color: #fff; 
-            border: 1px solid #283e34; 
-            border-radius: 10px; 
-            padding: 12px; 
-            box-sizing: border-box; 
-            margin-bottom: 12px; 
-            font-size: 14px; 
-            outline: none; 
-            transition: 0.2s;
+            width: 100%; background: #1a2922; color: #fff; border: 1px solid #283e34; 
+            border-radius: 10px; padding: 12px; box-sizing: border-box; 
+            margin-bottom: 12px; font-size: 14px; outline: none; transition: 0.2s;
         }
         
-        input:focus, textarea:focus { 
-            border-color: var(--accent); 
-            box-shadow: 0 0 5px rgba(197, 168, 128, 0.3);
-        }
-        
+        input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 5px rgba(197, 168, 128, 0.3); }
         textarea { height: 120px; resize: vertical; }
         
         button { 
-            width: 100%; 
-            padding: 14px; 
-            margin: 8px 0; 
-            border-radius: 12px; 
-            box-sizing: border-box; 
-            font-weight: bold; 
-            background: var(--primary); 
-            border: 1px solid var(--accent); 
-            color: var(--accent); 
-            cursor: pointer; 
-            font-size: 15px; 
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: 0.2s;
+            width: 100%; padding: 14px; margin: 8px 0; border-radius: 12px; 
+            box-sizing: border-box; font-weight: bold; background: var(--primary); 
+            border: 1px solid var(--accent); color: var(--accent); cursor: pointer; 
+            font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s;
         }
         
-        button:active:not(:disabled) {
-            background: var(--primary-light);
-        }
+        button:active:not(:disabled) { background: var(--primary-light); }
+        button:disabled { background: #1a2922; border-color: #283e34; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
         
-        button:disabled { 
-            background: #1a2922; 
-            border-color: #283e34;
-            color: var(--text-muted);
-            cursor: not-allowed; 
-            box-shadow: none;
-        }
-        
-        .scroll-box { 
-            text-align: left; 
-            background: #1a2922; 
-            padding: 10px; 
-            border-radius: 10px; 
-            max-height: 350px; 
-            overflow-y: auto; 
-            font-size: 13px; 
-            border: 1px solid #283e34; 
-            margin-top: 10px; 
-        }
-        
-        .list-item { 
-            background: var(--card); 
-            padding: 10px 14px; 
-            margin: 6px 0; 
-            border-radius: 8px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border: 1px solid rgba(197, 168, 128, 0.08);
-        }
-        
-        .btn-del { 
-            background: #5a2525; 
-            border: 1px solid #ff4444;
-            color: #ff8888;
-            width: auto; 
-            margin: 0; 
-            padding: 6px 12px; 
-            font-size: 12px; 
-            border-radius: 6px;
-            box-shadow: none;
-        }
-        .btn-del:active:not(:disabled) {
-            background: #7a3535;
-        }
-        
-        .status-box { 
-            color: var(--accent); 
-            font-size: 14px; 
-            margin: 10px 0; 
-            font-weight: bold; 
-            text-align: center; 
-        }
-        
-        .info-text { 
-            font-size: 12px; 
-            color: var(--text-muted); 
-            text-align: left; 
-            margin-bottom: 12px; 
-            display: block; 
-            line-height: 1.4; 
-        }
-        
-        .preview-box { 
-            font-size: 11px; 
-            text-align: left; 
-            color: var(--accent); 
-            background: #1a2922; 
-            padding: 10px; 
-            border-radius: 8px; 
-            margin-bottom: 10px; 
-            max-height: 150px; 
-            overflow-y: auto; 
-            border: 1px solid #283e34;
-        }
+        .scroll-box { text-align: left; background: #1a2922; padding: 10px; border-radius: 10px; max-height: 350px; overflow-y: auto; font-size: 13px; border: 1px solid #283e34; margin-top: 10px; }
+        .list-item { background: var(--card); padding: 10px 14px; margin: 6px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(197, 168, 128, 0.08); }
+        .btn-del { background: #5a2525; border: 1px solid #ff4444; color: #ff8888; width: auto; margin: 0; padding: 6px 12px; font-size: 12px; border-radius: 6px; box-shadow: none; }
+        .btn-del:active:not(:disabled) { background: #7a3535; }
+        .status-box { color: var(--accent); font-size: 14px; margin: 10px 0; font-weight: bold; text-align: center; }
+        .info-text { font-size: 12px; color: var(--text-muted); text-align: left; margin-bottom: 12px; display: block; line-height: 1.4; }
+        .preview-box { font-size: 11px; text-align: left; color: var(--accent); background: #1a2922; padding: 10px; border-radius: 8px; margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid #283e34; }
     </style>
 </head>
 <body>
@@ -243,35 +103,37 @@
     <h2>HIFZ CENTRAL MANAGEMENT SYSTEM</h2>
 
     <div class="admin-tabs">
-        <button class="admin-tab-btn active" onclick="switchPanel(0)">1. Аудио Сур (Масс)</button>
+        <button class="admin-tab-btn active" onclick="switchPanel(0)">1. Аудио Сур (CDN .opus)</button>
         <button class="admin-tab-btn" onclick="switchPanel(1)">2. ZIP Мусхаф (Картинки)</button>
         <button class="admin-tab-btn" onclick="switchPanel(2)">3. Переводы Текст</button>
         <button class="admin-tab-btn" onclick="switchPanel(3)">4. Хадисы Дня</button>
     </div>
 
     <div id="panel0" class="panel-content active card">
-        <h3>МАССОВАЯ ЗАГРУЗКА АУДИО ФАЙЛОВ СУР</h3>
+        <h3>РЕГИСТРАЦИЯ АУДИО ФАЙЛОВ .OPUS (ДЛЯ CDN)</h3>
         <span class="info-text">
-            Поддерживаются любые названия. Автоматический парсинг:<br>
-            • <b>Мут'оффифин-83_Арби.mp3</b> ➡️ Сура: 83, Чтец: Арби, Часть: 0 (ID: 083_0)<br>
-            • <b>(1)Мут'оффифин-83_Арби.mp3</b> ➡️ Сура: 83, Чтец: Арби, Часть: 1 (ID: 083_1)
+            Сами аудиофайлы загружайте на GitHub Pages. Здесь мы только сканируем их имена для базы данных.<br>
+            Умный парсинг имен:<br>
+            • <b>083.opus</b> ➡️ Сура: 83, Чтец: Общий, Часть: 0<br>
+            • <b>83-1.opus</b> ➡️ Сура: 83, Чтец: Общий, Часть: 1<br>
+            • <b>083-2_Арби.opus</b> ➡️ Сура: 83, Чтец: Арби, Часть: 2
         </span>
         
         <div id="audioDropZone" class="drop-zone" onclick="document.getElementById('audioFileInput').click()">
-            <p>Перетащите аудиофайлы (.mp3, .opus, .wav) группами<br><span style="font-size:12px;font-weight:normal;color:var(--text-muted);">или нажмите для выбора</span></p>
-            <input type="file" id="audioFileInput" multiple accept="audio/*" style="display:none;" onchange="handleAudioFiles(this.files)">
+            <p>Выделите и перетащите сюда .opus файлы из папки<br><span style="font-size:12px;font-weight:normal;color:var(--text-muted);">или нажмите для выбора</span></p>
+            <input type="file" id="audioFileInput" multiple accept=".opus" style="display:none;" onchange="handleAudioFiles(this.files)">
         </div>
         <div id="audioGlobalStatus" class="status-box">Ожидание файлов...</div>
         <div id="audioQueueContainer" class="preview-box" style="display:none;"></div>
-        <button id="btnStartAudioUpload" disabled onclick="startAudioBatchUpload()">ЗАПУСТИТЬ МАССОВУЮ ЗАГРУЗКУ АУДИО</button>
+        <button id="btnStartAudioUpload" disabled onclick="startMetadataBatchUpload()">ЗАПИСАТЬ МЕТАДАННЫЕ В БАЗУ</button>
 
-        <h4 style="text-align:left; margin-top:20px; color:var(--accent);">Аудиофайлы в базе данных:</h4>
+        <h4 style="text-align:left; margin-top:20px; color:var(--accent);">Связи файлов в базе данных:</h4>
         <div id="audioTracksList" class="scroll-box">Загрузка списка...</div>
     </div>
 
     <div id="panel1" class="panel-content card">
         <h3>ZIP МАНИПУЛЯТОР СТРАНИЦ МУСХАФА</h3>
-        <span class="info-text">Имена внутри архива должны содержать номер суры и номер страницы/части, например: <b>83_1.jpg</b> или <b>(1)89.jpg</b>.</span>
+        <span class="info-text">Имена внутри архива должны содержать номер суры и номер страницы/части, например: <b>83_1.jpg</b>.</span>
         
         <div id="zipDropZone" class="drop-zone" onclick="document.getElementById('zipFileInput').click()">
             <p>Перетащите сюда .ZIP архив со страницами оригинала <br><span style="font-size:11px; font-weight:normal; color:var(--text-muted);">или нажмите для выбора архива</span></p>
@@ -320,66 +182,34 @@
         document.querySelectorAll('.panel-content').forEach((panel, i) => panel.classList.toggle('active', i === idx));
     }
 
-    function readFileAsBase64(file) {
-        return new Promise((res, rej) => {
-            const r = new FileReader(); r.onload = (e) => res(e.target.result); r.onerror = rej; r.readAsDataURL(file);
-        });
-    }
-
     // =========================================================================
-    // ПАРСИНГ ИМЕН АУДИОФАЙЛОВ (ПОД ТРЕБОВАНИЯ ТРЕХ СЕЛЕКТОВ)
+    // ПАРСИНГ ИМЕН АУДИОФАЙЛОВ .OPUS
     // =========================================================================
-    function parseAudioFileName(filename) {
-        // Очищаем от расширения
-        let clean = filename.replace(/\.[^/.]+$/, "").trim();
+    function parseOpusFileName(filename) {
+        let clean = filename.replace(/\.opus$/i, "").trim();
         
-        // 1. Извлекаем часть из скобок в начале строки, если она есть
-        let part = 0;
-        let partMatch = clean.match(/^\((\d+)\)/);
-        if (partMatch) {
-            part = parseInt(partMatch[1]);
-            clean = clean.replace(/^\(\d+\)/, "").trim();
-        }
+        // Сура (цифры в самом начале)
+        let surahMatch = clean.match(/^0*(\d+)/);
+        let surahNum = surahMatch ? parseInt(surahMatch[1]) : 1;
 
-        // 2. Выделяем чтеца (все, что после последнего символа подчёркивания)
-        let reader = "Неизвестный";
-        if (clean.includes('_')) {
-            let lastUnderscore = clean.lastIndexOf('_');
-            reader = clean.substring(lastUnderscore + 1).trim();
-            clean = clean.substring(0, lastUnderscore).trim(); // Остается имя суры и номер
-        }
+        // Часть (цифры после дефиса, но до нижнего подчеркивания или конца)
+        let partMatch = clean.match(/-(\d+)/);
+        let partNum = partMatch ? parseInt(partMatch[1]) : 0;
 
-        // Очищаем имя чтеца от возможных префиксов "Чтец:"
-        reader = reader.replace(/^(Чтец:\s*|Чтец_)/i, "").trim();
-
-        // 3. Выделяем номер суры и её название (например, Мут'оффифин-83 или 83-Мут'оффифин)
-        let surahNum = 0;
-        let surahName = clean;
-
-        let numMatch = clean.match(/-(\d+)$/) || clean.match(/^(\d+)-/);
-        if (numMatch) {
-            surahNum = parseInt(numMatch[1]);
-            // Удаляем номер из названия, чтобы получить чистое текстовое имя
-            surahName = clean.replace(numMatch[0], "").replace(/^-|-$/, "").trim();
-        } else {
-            // Фолбэк на случай, если дефиса нет, но цифры в строке присутствуют
-            let standaloneNumMatch = clean.match(/\d+/);
-            if (standaloneNumMatch) {
-                surahNum = parseInt(standaloneNumMatch[0]);
-                surahName = clean.replace(standaloneNumMatch[0], "").trim();
-            }
-        }
+        // Чтец (все, что после первого нижнего подчеркивания)
+        let readerMatch = clean.match(/_(.+)$/);
+        let readerName = readerMatch ? readerMatch[1].trim() : "Общий";
 
         return {
-            surahNum: surahNum || 999,
-            surahName: surahName || "Неизвестная Сура",
-            reader: reader,
-            part: part
+            surahNum: surahNum,
+            reader: readerName,
+            part: partNum,
+            fileName: filename
         };
     }
 
     // ==========================================
-    // ЛОГИКА ВКЛАДКИ 1: МАССОВАЯ ЗАГРУЗКА АУДИО
+    // ЛОГИКА ВКЛАДКИ 1: МЕТАДАННЫЕ .OPUS ФАЙЛОВ
     // ==========================================
     let audioFilesQueue = [];
     const audioDropZone = document.getElementById('audioDropZone');
@@ -392,80 +222,76 @@
         if(files.length === 0) return;
         audioFilesQueue = [];
         const container = document.getElementById('audioQueueContainer');
-        container.innerHTML = "<b>Анализ структуры файлов перед отправкой:</b><br>";
+        container.innerHTML = "<b>Анализ структуры имен файлов:</b><br>";
         container.style.display = "block";
 
         for(let i=0; i<files.length; i++) {
             const f = files[i];
-            const parsed = parseAudioFileName(f.name);
+            // Пропускаем все, что не .opus
+            if (!f.name.toLowerCase().endsWith('.opus')) continue;
+
+            const parsed = parseOpusFileName(f.name);
             
-            // Генерируем жесткий trackId для базы данных: сура с падингом из трех цифр + нижнее подчёркивание + часть
+            // Генерируем жесткий trackId
             let paddedSurah = String(parsed.surahNum).padStart(3, '0');
-            let trackId = `${paddedSurah}_${parsed.part}`;
+            let trackId = `${paddedSurah}_${parsed.part}_${parsed.reader.replace(/\s+/g, '')}`;
 
             audioFilesQueue.push({ 
-                file: f, 
                 trackId: trackId,
                 meta: parsed
             });
 
             container.innerHTML += `
                 <div style="margin-bottom: 4px; border-bottom: 1px solid #23392e; padding-bottom:2px;">
-                    📁 ${f.name} <br>
-                    ➡️ <span style="color:var(--accent)">Сура ${parsed.surahNum} (${parsed.surahName})</span> | 
+                    📁 ${parsed.fileName} <br>
+                    ➡️ Сура <span style="color:var(--accent)">${parsed.surahNum}</span> | 
                     Чтец: <span style="color:#fff">${parsed.reader}</span> | 
                     Часть: <span style="color:#fff">${parsed.part}</span> 
-                    <small style="color:var(--text-muted)">(ID пути: surahs/${trackId})</small>
                 </div>`;
         }
-        document.getElementById('audioGlobalStatus').textContent = `Готово к импорту: ${audioFilesQueue.length} файлов`;
-        document.getElementById('btnStartAudioUpload').disabled = false;
+        document.getElementById('audioGlobalStatus').textContent = `Готово к регистрации: ${audioFilesQueue.length} файлов`;
+        document.getElementById('btnStartAudioUpload').disabled = audioFilesQueue.length === 0;
     }
 
-    async function startAudioBatchUpload() {
+    async function startMetadataBatchUpload() {
         const btn = document.getElementById('btnStartAudioUpload');
         btn.disabled = true;
         audioDropZone.style.pointerEvents = "none";
 
         for(let i=0; i<audioFilesQueue.length; i++) {
             const item = audioFilesQueue[i];
-            document.getElementById('audioGlobalStatus').textContent = `Загрузка: ${i+1} из ${audioFilesQueue.length} (${item.meta.surahName})...`;
+            document.getElementById('audioGlobalStatus').textContent = `Запись метаданных: ${i+1} из ${audioFilesQueue.length}...`;
             
             try {
-                if(item.file.size > 14 * 1024 * 1024) { throw new Error("Размер файла превышает ограничение базы данных!"); }
-                const b64 = await readFileAsBase64(item.file);
-                
-                // Сохраняем по строгому пути с сохранением всей метаинформации, не затрагивая /markup
+                // Больше нет base64! Отправляем только метаданные
                 await database.ref('surahs/' + item.trackId).update({
                     surahNum: item.meta.surahNum,
-                    surahName: item.meta.surahName,
                     reader: item.meta.reader,
                     part: item.meta.part,
-                    audio: b64,
+                    fileName: item.meta.fileName,
                     timestamp: Date.now()
                 });
             } catch(e) {
                 console.error(e);
-                alert(`Ошибка при импорте "${item.file.name}": ` + e.message);
+                alert(`Ошибка при записи "${item.meta.fileName}": ` + e.message);
             }
         }
-        document.getElementById('audioGlobalStatus').textContent = "🎉 Все аудиофайлы успешно загружены в систему!";
+        document.getElementById('audioGlobalStatus').textContent = "🎉 Метаданные файлов успешно привязаны к базе!";
         document.getElementById('audioQueueContainer').style.display = "none";
         audioDropZone.style.pointerEvents = "auto";
         audioFilesQueue = [];
     }
 
-    // Слушатель списка аудиофайлов в реальном времени
+    // Слушатель списка связей
     database.ref('surahs').on('value', (snap) => {
         const list = document.getElementById('audioTracksList');
         list.innerHTML = "";
-        if(!snap.exists()) { list.innerHTML = "База данных аудиофайлов пуста"; return; }
+        if(!snap.exists()) { list.innerHTML = "База метаданных пуста"; return; }
         
         let displayList = [];
         snap.forEach(child => {
             let data = child.val();
-            // Поддержка отображения старых записей, если они были загружены в ином формате названия
-            let text = data.surahNum ? `[${data.surahNum}] ${data.surahName} — Чтец: ${data.reader} (Часть ${data.part})` : `Файл: ${data.name || child.key}`;
+            let text = `[Сура ${data.surahNum || '?'}] Файл: ${data.fileName || child.key} — Чтец: ${data.reader || '?'} (Часть ${data.part || 0})`;
             displayList.push({ 
                 key: child.key, 
                 text: text,
@@ -474,15 +300,14 @@
             });
         });
         
-        // Сортировка по номеру суры и частям
         displayList.sort((a,b) => a.surahNum - b.surahNum || a.part - b.part);
 
         displayList.forEach(item => {
             const div = document.createElement('div'); div.className = 'list-item';
-            div.innerHTML = `<span>${item.text} <br><small style="color:var(--text-muted)">Путь разметки: surahs/${item.key}/markup</small></span>`;
-            const dBtn = document.createElement('button'); dBtn.className='btn-del'; dBtn.textContent='Удалить';
+            div.innerHTML = `<span>${item.text}</span>`;
+            const dBtn = document.createElement('button'); dBtn.className='btn-del'; dBtn.textContent='Удалить связь';
             dBtn.onclick = () => { 
-                if(confirm(`ВНИМАНИЕ: Удаление сотрет аудиофайл!\nУдалить "${item.text}"?`)) {
+                if(confirm(`Удалить метаданные "${item.text}"? (Это не удалит сам файл с CDN)`)) {
                     database.ref('surahs/'+item.key).remove();
                 }
             };
@@ -491,7 +316,7 @@
     });
 
     // ==========================================
-    // ЛОГИКА ВКЛАДКИ 2: ZIP КАРТИНКИ МУСХАФА
+    // ОСТАЛЬНАЯ ЛОГИКА (ZIP, ПЕРЕВОДЫ, ХАДИСЫ) - БЕЗ ИЗМЕНЕНИЙ
     // ==========================================
     let extractedImages = [];
     const zipDropZone = document.getElementById('zipDropZone');
@@ -585,9 +410,6 @@
         });
     });
 
-    // ==========================================
-    // ЛОГИКА ВКЛАДКИ 3: РУССКИЕ ПЕРЕВОДЫ
-    // ==========================================
     function saveTranslation() {
         const num = parseInt(document.getElementById('transSurahNum').value);
         const text = document.getElementById('transText').value.trim();
@@ -618,9 +440,6 @@
         });
     });
 
-    // ==========================================
-    // ЛОГИКА ВКЛАДКИ 4: ХАДИСЫ И ФАКТЫ ДНЯ
-    // ==========================================
     function saveHadith() {
         const text = document.getElementById('hadithInputText').value.trim();
         const status = document.getElementById('hadithStatus');
