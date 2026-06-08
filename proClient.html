@@ -163,22 +163,70 @@
         .speed-control input[type="range"] { flex-grow: 1; margin: 0 12px; accent-color: var(--accent); }
         .val-indicator { font-weight: bold; min-width: 35px; color: var(--accent); text-align: right; font-size: 13px; }
 
-        .loop-settings { display: flex; justify-content: space-between; margin-top: 12px; gap: 10px; }
-        .time-group { background: #1a2922; padding: 12px; border-radius: 12px; width: 50%; box-sizing: border-box; border: 1px solid #283e34; }
-        .time-group h4 { margin: 0 0 8px 0; color: var(--accent); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+        /* КОМПАКТНЫЕ КНОПКИ УПРАВЛЕНИЯ */
+        .tools-grid { display: flex; gap: 10px; margin-top: 15px; }
+        .tool-btn { 
+            flex: 1; 
+            background: #1a2922; 
+            border: 1px solid #283e34; 
+            padding: 12px; 
+            border-radius: 10px; 
+            color: var(--text-muted); 
+            font-weight: bold; 
+            font-size: 13px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ЗАТЕМНЕНИЕ АКТИВНЫХ КНОПОК */
+        .tool-btn.active {
+            background: #080d0a; 
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.7);
+        }
+
+        /* СКРЫТЫЕ НАСТРОЙКИ (ДЕТАЛИ) */
+        .settings-details {
+            margin-top: 10px;
+            background: #141f1a;
+            border: 1px solid #283e34;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .settings-details summary {
+            padding: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            list-style: none;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #1a2922;
+        }
+        .settings-details summary::-webkit-details-marker { display: none; }
+        .settings-inner { padding: 15px; }
+
+        .loop-settings { display: flex; justify-content: space-between; gap: 10px; }
+        .time-group { background: #1a2922; padding: 12px; border-radius: 10px; width: 50%; box-sizing: border-box; border: 1px solid #283e34; }
+        .time-group h4 { margin: 0 0 8px 0; color: var(--accent); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
         .inputs-container { display: flex; justify-content: space-between; gap: 5px; }
         .input-sub { width: 50%; }
         .input-sub span { display: block; font-size: 9px; color: var(--text-muted); margin-top: 2px; }
-        input[type="number"] { background: #141f1a; color: #fff; border: 1px solid #283e34; padding: 6px; border-radius: 6px; width: 100%; text-align: center; box-sizing: border-box; font-size: 13px; }
+        input[type="number"] { background: #0b110e; color: #fff; border: 1px solid #283e34; padding: 6px; border-radius: 6px; width: 100%; text-align: center; box-sizing: border-box; font-size: 13px; }
         input[type="number"]:focus { border-color: var(--accent); outline: none; }
         
-        .btn-capture { background: #967342; font-size: 11px; padding: 8px; width: 100%; margin-top: 8px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.15s; }
+        .btn-capture { background: #967342; font-size: 10px; padding: 8px; width: 100%; margin-top: 8px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.15s; }
         .btn-capture:active { background: var(--accent); }
         
-        .btn-main { background: var(--primary); width: 100%; font-size: 15px; margin-top: 15px; padding: 14px; border: 1px solid var(--accent); border-radius: 12px; color: var(--accent); font-weight: bold; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
-        
-        /* Индикатор голоса */
-        .mic-active-pulse { box-shadow: 0 0 15px var(--accent); background: #3b2818 !important; border-color: #e0bc8c !important; color: #fff !important; }
+        /* Индикатор голоса (пульсация) */
+        .mic-active-pulse { border-color: #e0bc8c !important; color: #fff !important; box-shadow: inset 0 4px 12px rgba(0,0,0,0.8), 0 0 8px rgba(197, 168, 128, 0.4) !important; }
 
         .tabs-header { display: flex; background: #1a2922; border-radius: 12px; padding: 4px; margin: 10px 0; border: 1px solid #283e34; }
         .tab-btn { flex: 1; background: none; border: none; color: var(--text-muted); padding: 12px; font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 8px; transition: 0.2s; }
@@ -257,51 +305,58 @@
             <span class="val-indicator" id="speedVal">1.0x</span>
         </div>
 
-        <div class="loop-settings">
-            <div class="time-group">
-                <h4>НАЧАЛО ПЕТЛИ</h4>
-                <div class="inputs-container">
-                    <div class="input-sub">
-                        <input type="number" id="startMin" value="0" min="0">
-                        <span>мин</span>
-                    </div>
-                    <div class="input-sub">
-                        <input type="number" id="startSec" value="0" min="0" max="59" step="0.1">
-                        <span>сек</span>
-                    </div>
-                </div>
-                <button class="btn-capture" id="btnCapStart" onclick="captureTime('start')">⏱ Поймать</button>
-            </div>
-            
-            <div class="time-group">
-                <h4>КОНЕЦ ПЕТЛИ</h4>
-                <div class="inputs-container">
-                    <div class="input-sub">
-                        <input type="number" id="endMin" value="0" min="0">
-                        <span>мин</span>
-                    </div>
-                    <div class="input-sub">
-                        <input type="number" id="endSec" value="10" min="0" max="59" step="0.1">
-                        <span>сек</span>
-                    </div>
-                </div>
-                <button class="btn-capture" id="btnCapEnd" onclick="captureTime('end')">⏱ Поймать</button>
-            </div>
+        <div class="tools-grid">
+            <button class="tool-btn" id="btnLoop" onclick="toggleLoop()"> ПОВТОР</button>
+            <button class="tool-btn" id="btnSmartMic" onclick="toggleSmartMic()"> ИНТЕРАКТИВ</button>
         </div>
 
-        <button class="btn-main" id="btnLoop" onclick="toggleLoop()">ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ</button>
-        
-        <hr style="border-color:#283e34; margin:20px 0 10px 0;">
-        
-        <!-- НОВЫЙ БЛОК: УМНЫЙ МИКРОФОН -->
-        <button class="btn-main" id="btnSmartMic" style="margin-top: 5px;" onclick="toggleSmartMic()">🎙 ИНТЕРАКТИВ: ВЫКЛ</button>
-        <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Используйте наушники. Когда вы читаете, чтец ждёт.</p>
-        
-        <div class="speed-control" id="micControls" style="display: none; margin-top: 10px;">
-            <label>Чувствительность:</label>
-            <input type="range" id="micSlider" min="5" max="100" step="1" value="20" oninput="changeMicSensitivity(this.value)">
-            <span class="val-indicator" id="micVal">20</span>
-        </div>
+        <details class="settings-details">
+            <summary>⚙️ Регуляторы и настройки</summary>
+            <div class="settings-inner">
+                
+                <div class="loop-settings">
+                    <div class="time-group">
+                        <h4>НАЧАЛО ПЕТЛИ</h4>
+                        <div class="inputs-container">
+                            <div class="input-sub">
+                                <input type="number" id="startMin" value="0" min="0">
+                                <span>мин</span>
+                            </div>
+                            <div class="input-sub">
+                                <input type="number" id="startSec" value="0" min="0" max="59" step="0.1">
+                                <span>сек</span>
+                            </div>
+                        </div>
+                        <button class="btn-capture" id="btnCapStart" onclick="captureTime('start')">⏱ Поймать</button>
+                    </div>
+                    
+                    <div class="time-group">
+                        <h4>КОНЕЦ ПЕТЛИ</h4>
+                        <div class="inputs-container">
+                            <div class="input-sub">
+                                <input type="number" id="endMin" value="0" min="0">
+                                <span>мин</span>
+                            </div>
+                            <div class="input-sub">
+                                <input type="number" id="endSec" value="10" min="0" max="59" step="0.1">
+                                <span>сек</span>
+                            </div>
+                        </div>
+                        <button class="btn-capture" id="btnCapEnd" onclick="captureTime('end')">⏱ Поймать</button>
+                    </div>
+                </div>
+
+                <div class="speed-control" style="margin-top: 15px; margin-bottom: 0;">
+                    <label>Чувствительность:</label>
+                    <input type="range" id="micSlider" min="1" max="100" step="1" value="90" oninput="changeMicSensitivity(this.value)">
+                    <span class="val-indicator" id="micVal">90</span>
+                </div>
+                <p style="font-size: 10px; color: var(--text-muted); margin: 8px 0 0 0; text-align: left; line-height: 1.4;">
+                    * Чувствительность <span id="micHintText" style="color: var(--accent); font-weight: bold;">90 — слышит обычную речь</span>. (Используйте наушники, чтобы избежать эха).
+                </p>
+                
+            </div>
+        </details>
         
     </div>
 
@@ -362,10 +417,10 @@
     let analyser;
     let microphone;
     let micStream;
-    let micSensitivity = 20; // Порог громкости
+    let micSensitivity = 90; 
     let silenceTimer = null;
     let isUserSpeaking = false;
-    let wasTrackPlaying = false; // Чтобы не запустить плеер, если пользователь сам поставил его на паузу
+    let wasTrackPlaying = false; 
     const btnSmartMic = document.getElementById('btnSmartMic');
     // -----------------------------------
 
@@ -624,10 +679,9 @@
         }
 
         document.getElementById('currentTitle').textContent = titleStr;
+        
         isLooping = false;
-        btnLoop.textContent = "ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ";
-        btnLoop.style.background = "#12513f"; 
-        btnLoop.style.borderColor = "#c5a880";
+        btnLoop.classList.remove('active');
 
         mainPlayer.src = track.audio;
         mainPlayer.onloadedmetadata = () => {
@@ -704,7 +758,7 @@
                 span.onclick = () => {
                     if(currentMarkup.timings[idx] !== undefined && currentMarkup.timings[idx] !== null) {
                         mainPlayer.currentTime = Number(currentMarkup.timings[idx]);
-                        if (isMicActive) wasTrackPlaying = true; // Фикс для ручного перехода
+                        if (isMicActive) wasTrackPlaying = true; 
                     }
                 };
                 container.appendChild(span);
@@ -743,26 +797,23 @@
 
     function toggleLoop() {
         isLooping = !isLooping;
-        btnLoop.textContent = isLooping ? "ВКЛЮЧИТЬ ПОВТОР: ВКЛ" : "ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ";
-        btnLoop.style.background = isLooping ? "#1e5e3a" : "#12513f";
-        btnLoop.style.borderColor = isLooping ? "#66bb6a" : "#c5a880";
         if (isLooping) {
+            btnLoop.classList.add('active');
             let start = (parseInt(startMin.value)||0)*60 + (parseFloat(startSec.value)||0);
             if (mainPlayer.currentTime < start) mainPlayer.currentTime = start;
             mainPlayer.play();
+        } else {
+            btnLoop.classList.remove('active');
         }
     }
 
     // --- ФУНКЦИИ УМНОГО МИКРОФОНА ---
     
-    // Переключение состояния
     async function toggleSmartMic() {
         if (!isMicActive) {
             try {
-                // Запрашиваем доступ к микрофону
                 micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
-                // Настраиваем анализ аудио
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 256; 
@@ -771,15 +822,10 @@
                 microphone.connect(analyser);
                 
                 isMicActive = true;
-                wasTrackPlaying = !mainPlayer.paused; // Запоминаем, играл ли трек
+                wasTrackPlaying = !mainPlayer.paused;
                 
-                // Обновляем интерфейс
-                btnSmartMic.textContent = "🎙 ИНТЕРАКТИВ: АКТИВЕН";
-                btnSmartMic.style.background = "#1e5e3a";
-                btnSmartMic.style.borderColor = "#66bb6a";
-                document.getElementById('micControls').style.display = "flex";
+                btnSmartMic.classList.add('active');
                 
-                // Запускаем цикл прослушивания
                 listenToMicrophone();
                 
             } catch (err) {
@@ -787,7 +833,6 @@
                 console.error("Ошибка доступа к микрофону: ", err);
             }
         } else {
-            // Выключаем функцию
             isMicActive = false;
             
             if (micStream) {
@@ -797,13 +842,9 @@
                 audioContext.close();
             }
             
-            btnSmartMic.textContent = "🎙 ИНТЕРАКТИВ: ВЫКЛ";
-            btnSmartMic.style.background = "var(--primary)";
-            btnSmartMic.style.borderColor = "var(--accent)";
+            btnSmartMic.classList.remove('active');
             btnSmartMic.classList.remove('mic-active-pulse');
-            document.getElementById('micControls').style.display = "none";
             
-            // Если мы ставили на паузу из-за микрофона, возвращаем проигрывание
             if (isUserSpeaking && wasTrackPlaying) {
                 mainPlayer.play();
             }
@@ -811,63 +852,80 @@
         }
     }
 
-    // Изменение порога чувствительности
+    // ОБНОВЛЕННАЯ ФУНКЦИЯ ИЗМЕНЕНИЯ ЧУВСТВИТЕЛЬНОСТИ
     function changeMicSensitivity(val) {
         micSensitivity = parseInt(val);
         document.getElementById('micVal').textContent = val;
+        
+        let hintDesc = "слышит обычную речь";
+        if (val >= 90) hintDesc = "слышит малейший шепот";
+        else if (val <= 20) hintDesc = "нужно говорить прямо в микрофон";
+        else if (val <= 50) hintDesc = "нужно говорить громко";
+
+        let hintSpan = document.getElementById('micHintText');
+        if (hintSpan) {
+            hintSpan.textContent = val + " — " + hintDesc;
+        }
     }
 
-    // Главный цикл обработки звука
+    // ОБНОВЛЕННАЯ ЛОГИКА АНАЛИЗА ЗВУКА
     function listenToMicrophone() {
-        if (!isMicActive) return;
-        requestAnimationFrame(listenToMicrophone);
+    if (!isMicActive) return;
+    requestAnimationFrame(listenToMicrophone);
 
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyser.getByteFrequencyData(dataArray);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteFrequencyData(dataArray);
 
-        // Считаем средний уровень громкости
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-            sum += dataArray[i];
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i];
+    }
+    let volume = sum / bufferLength;
+
+    let actualThreshold = 105 - micSensitivity;
+
+    if (volume > actualThreshold) {
+        // Если пошел звук — отменяем таймер тишины, если он был
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
         }
-        let volume = sum / bufferLength;
-
-        // Если громкость превышает порог — пользователь читает
-        if (volume > micSensitivity) {
-            clearTimeout(silenceTimer); 
+        
+        if (!isUserSpeaking) {
+            isUserSpeaking = true;
+            btnSmartMic.classList.add('mic-active-pulse'); 
             
-            if (!isUserSpeaking) {
-                isUserSpeaking = true;
-                btnSmartMic.classList.add('mic-active-pulse'); // Визуальный индикатор (Слушаю)
+            if (!mainPlayer.paused) {
+                wasTrackPlaying = true;
+                mainPlayer.pause();
+            } else {
+                wasTrackPlaying = false; 
+            }
+        }
+    } else {
+        // Звук ниже порога. Если мы говорили, но таймер еще не запущен:
+        if (isUserSpeaking && !silenceTimer) {
+            
+            // Запускаем ровно ОДИН таймер на 0.5 секунды
+            silenceTimer = setTimeout(() => {
+                isUserSpeaking = false;
+                silenceTimer = null; // Очищаем статус таймера
+                btnSmartMic.classList.remove('mic-active-pulse');
                 
-                // Сохраняем состояние плеера. Если он играл, ставим на паузу
-                if (!mainPlayer.paused) {
-                    wasTrackPlaying = true;
-                    mainPlayer.pause();
-                } else {
-                    // Если пользователь сам поставил на паузу до этого, не трогаем
-                    wasTrackPlaying = false; 
-                }
-            }
-        } else {
-            // Пользователь молчит
-            if (isUserSpeaking) {
-                // Ждем 700мс тишины, чтобы не перебивать паузы между словами
-                silenceTimer = setTimeout(() => {
-                    isUserSpeaking = false;
-                    btnSmartMic.classList.remove('mic-active-pulse');
+                // Если плеер играл до этого, снимаем с паузы
+                if (wasTrackPlaying && mainPlayer.paused && mainPlayer.src) {
+                    mainPlayer.currentTime = Math.max(0, mainPlayer.currentTime - 0.3);
                     
-                    // Возвращаем воспроизведение только если трек играл ДО того, как мы начали говорить
-                    if (wasTrackPlaying && mainPlayer.paused && mainPlayer.src) {
-                        mainPlayer.play();
-                    }
-                }, 700);
-            }
+                    // .catch нужен, чтобы браузер не ругался в консоли, если прервать плей
+                    mainPlayer.play().catch(e => console.log("Плеер ожидает:", e)); 
+                }
+            }, 700); 
         }
     }
+}
+
     
-    // Чтобы система не сходила с ума, если пользователь вручную нажимает play/pause
     mainPlayer.addEventListener('play', () => { if(isMicActive && !isUserSpeaking) wasTrackPlaying = true; });
     mainPlayer.addEventListener('pause', () => { if(isMicActive && !isUserSpeaking) wasTrackPlaying = false; });
     // -----------------------------------
@@ -940,72 +998,62 @@
             content.classList.toggle('active', idx === tabIndex);
         });
     }
+
     // =====================================================================
-// ИСПРАВЛЕННЫЙ БЛОК АНАЛИТИКИ (ЗАМЕНИТЬ ПОЛНОСТЬЮ В КОНЦЕ СКРИПТА)
-// =====================================================================
+    // БЛОК АНАЛИТИКИ ИЗ ОРИГИНАЛА СТРОГО БЕЗ ИЗМЕНЕНИЙ
+    // =====================================================================
+    let hasTrackedPlay = false; 
 
-let hasTrackedPlay = false; // Флаг-защелка для одного трекинга на суру
+    mainPlayer.addEventListener('loadstart', () => {
+        hasTrackedPlay = false;
+    });
 
-// Сбрасываем защелку аналитики каждый раз, когда в плеер загружается новый трек
-mainPlayer.addEventListener('loadstart', () => {
-    hasTrackedPlay = false;
-});
+    mainPlayer.addEventListener('play', () => {
+        if (!selectedTrackId || hasTrackedPlay) return; 
 
-// Отслеживание нажатия на кнопку Play в плеере
-mainPlayer.addEventListener('play', () => {
-    // Проверяем, инициализирован ли трек плеером и не отправлялись ли данные ранее
-    if (!selectedTrackId || hasTrackedPlay) return; 
+        const track = dbTracks.find(s => s.id === selectedTrackId);
+        if (!track) return;
 
-    // Ищем трек в твоем реальном массиве dbTracks
-    const track = dbTracks.find(s => s.id === selectedTrackId);
-    if (!track) return;
-
-    // Генерируем или берем существующий ID устройства
-    let deviceId = localStorage.getItem('hifz_device_id');
-    if (!deviceId) {
-        deviceId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
-        localStorage.setItem('hifz_device_id', deviceId);
-    }
-
-    // Записываем факт воспроизведения в Firebase, используя точные свойства твоего объекта
-    database.ref('app_analytics/plays').push({
-        deviceId: deviceId,
-        surahId: track.id,
-        surahName: track.surahName, 
-        part: track.part,           
-        reciter: track.reader,      // В твоем коде имя чтеца лежит в свойстве reader
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        hasTrackedPlay = true; // Блокируем повторные отправки до смены трека
-        console.log('📊 Аналитика: Прослушивание зафиксировано в БД.');
-    }).catch(err => console.error('Ошибка аналитики Firebase:', err));
-});
-
-// Маленькая команда для консоли браузера
-window.getStats = function() {
-    database.ref('app_analytics/plays').get().then(snap => {
-        if(!snap.exists()) {
-            console.log('%cБаза аналитики пуста.', 'color: #8fa099;');
-            return;
+        let deviceId = localStorage.getItem('hifz_device_id');
+        if (!deviceId) {
+            deviceId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
+            localStorage.setItem('hifz_device_id', deviceId);
         }
-        
-        const data = snap.val();
-        const uniqueDevices = new Set();
-        let totalPlays = 0;
 
-        Object.values(data).forEach(record => {
-            if(record.deviceId) uniqueDevices.add(record.deviceId);
-            totalPlays++;
-        });
+        database.ref('app_analytics/plays').push({
+            deviceId: deviceId,
+            surahId: track.id,
+            surahName: track.surahName, 
+            part: track.part,           
+            reciter: track.reader,      
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            hasTrackedPlay = true; 
+            console.log('📊 Аналитика: Прослушивание зафиксировано в БД.');
+        }).catch(err => console.error('Ошибка аналитики Firebase:', err));
+    });
 
-        // Красивый вывод результатов в консоль
-        console.log(`%c📊 СТАТИСТИКА HIFZ:`, 'color: #c5a880; font-weight: bold; font-size: 14px; background: #141f1a; padding: 4px 8px; border-radius: 4px;');
-        console.log(`📱 Уникальных устройств зашло: %c${uniqueDevices.size}`, 'color: #00ff00; font-weight: bold; font-size: 13px;');
-        console.log(`▶ Всего нажатий на Play: %c${totalPlays}`, 'color: #cbd6d0; font-weight: bold;');
-    }).catch(err => console.error('Не удалось загрузить данные из Firebase:', err));
-};
+    window.getStats = function() {
+        database.ref('app_analytics/plays').get().then(snap => {
+            if(!snap.exists()) {
+                console.log('%cБаза аналитики пуста.', 'color: #8fa099;');
+                return;
+            }
+            
+            const data = snap.val();
+            const uniqueDevices = new Set();
+            let totalPlays = 0;
 
+            Object.values(data).forEach(record => {
+                if(record.deviceId) uniqueDevices.add(record.deviceId);
+                totalPlays++;
+            });
 
+            console.log(`%c📊 СТАТИСТИКА HIFZ:`, 'color: #c5a880; font-weight: bold; font-size: 14px; background: #141f1a; padding: 4px 8px; border-radius: 4px;');
+            console.log(`📱 Уникальных устройств зашло: %c${uniqueDevices.size}`, 'color: #00ff00; font-weight: bold; font-size: 13px;');
+            console.log(`▶ Всего нажатий на Play: %c${totalPlays}`, 'color: #cbd6d0; font-weight: bold;');
+        }).catch(err => console.error('Не удалось загрузить данные из Firebase:', err));
+    };
 </script>
 </body>
 </html>
