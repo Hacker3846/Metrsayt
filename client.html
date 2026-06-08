@@ -807,31 +807,23 @@
         });
     }
     // =====================================================================
-// БЛОК АНАЛИТИКИ УСТРОЙСТВ И ЗАПУСКОВ (ДОБАВИТЬ В КОНЕЦ СКРИПТА)
+// ИСПРАВЛЕННЫЙ БЛОК АНАЛИТИКИ (ЗАМЕНИТЬ ПОЛНОСТЬЮ В КОНЦЕ СКРИПТА)
 // =====================================================================
 
 let hasTrackedPlay = false; // Флаг-защелка для одного трекинга на суру
 
-// Сбрасываем флаг трекинга, когда пользователь выбирает другую суру в списке
-document.getElementById('surahSelect').addEventListener('change', () => {
+// Сбрасываем защелку аналитики каждый раз, когда в плеер загружается новый трек
+mainPlayer.addEventListener('loadstart', () => {
     hasTrackedPlay = false;
 });
 
-// Дополнительно перехватываем вызовы оригинальной функции для сброса флага
-const originalLoadSurahData = window.loadSurahData;
-if (typeof originalLoadSurahData === 'function') {
-    window.loadSurahData = function(id, startTime = 0, autoplay = false) {
-        hasTrackedPlay = false; // Сброс при любом переключении трека
-        return originalLoadSurahData(id, startTime, autoplay);
-    };
-}
-
 // Отслеживание нажатия на кнопку Play в плеере
 mainPlayer.addEventListener('play', () => {
-    const currentSurahId = document.getElementById('surahSelect').value;
-    if (!currentSurahId || hasTrackedPlay) return; // Игнорируем, если сура не выбрана или уже посчитана
+    // Проверяем, инициализирован ли трек плеером и не отправлялись ли данные ранее
+    if (!selectedTrackId || hasTrackedPlay) return; 
 
-    const track = allSurahs.find(s => s.id === currentSurahId);
+    // Ищем трек в твоем реальном массиве dbTracks
+    const track = dbTracks.find(s => s.id === selectedTrackId);
     if (!track) return;
 
     // Генерируем или берем существующий ID устройства
@@ -841,16 +833,16 @@ mainPlayer.addEventListener('play', () => {
         localStorage.setItem('hifz_device_id', deviceId);
     }
 
-    // Записываем факт воспроизведения в Firebase
+    // Записываем факт воспроизведения в Firebase, используя точные свойства твоего объекта
     database.ref('app_analytics/plays').push({
         deviceId: deviceId,
         surahId: track.id,
-        surahName: track.meta.surahName,
-        part: track.meta.part,
-        reciter: track.meta.reciter,
+        surahName: track.surahName, 
+        part: track.part,           
+        reciter: track.reader,      // В твоем коде имя чтеца лежит в свойстве reader
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
-        hasTrackedPlay = true; // Блокируем повторные отправки для этой суры
+        hasTrackedPlay = true; // Блокируем повторные отправки до смены трека
         console.log('📊 Аналитика: Прослушивание зафиксировано в БД.');
     }).catch(err => console.error('Ошибка аналитики Firebase:', err));
 });
@@ -859,7 +851,7 @@ mainPlayer.addEventListener('play', () => {
 window.getStats = function() {
     database.ref('app_analytics/plays').get().then(snap => {
         if(!snap.exists()) {
-            console.log('%cБаза аналитики пуста.', 'color: #text-muted;');
+            console.log('%cБаза аналитики пуста.', 'color: #8fa099;');
             return;
         }
         
@@ -872,12 +864,13 @@ window.getStats = function() {
             totalPlays++;
         });
 
-        // Красивый и компактный вывод результатов в консоль
+        // Красивый вывод результатов в консоль
         console.log(`%c📊 СТАТИСТИКА HIFZ:`, 'color: #c5a880; font-weight: bold; font-size: 14px; background: #141f1a; padding: 4px 8px; border-radius: 4px;');
         console.log(`📱 Уникальных устройств зашло: %c${uniqueDevices.size}`, 'color: #00ff00; font-weight: bold; font-size: 13px;');
         console.log(`▶ Всего нажатий на Play: %c${totalPlays}`, 'color: #cbd6d0; font-weight: bold;');
     }).catch(err => console.error('Не удалось загрузить данные из Firebase:', err));
 };
+
 
 </script>
 </body>
