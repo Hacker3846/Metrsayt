@@ -6,6 +6,7 @@
     <title>HIFZ — Заучивание Корана</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="list_surah.js"></script>
     <style>
         :root { 
             --primary: #12513f; 
@@ -186,8 +187,7 @@
 
         .karaoke-box { text-align: left; direction: ltr; font-size: 24px; line-height: 1.9; word-break: break-word; font-family: Georgia, serif; }
         .char-span { padding: 2px 4px; cursor: pointer; border-radius: 6px; color: #758c81; transition: background 0.12s, color 0.12s; display: inline-block; margin-bottom: 4px; }
-        .char-span.highlight { 
-    color: #17241f; background: var(--accent); box-shadow: 0 0 12px var(--accent); text-shadow: 1.5px 0 0 #141f1a; /* Имитация жирности без сдвига текста */}
+        .char-span.highlight { color: #17241f; background: var(--accent); box-shadow: 0 0 12px var(--accent); text-shadow: 1.5px 0 0 #141f1a; }
 
         .translation-box { text-align: left; font-size: 16px; line-height: 1.6; color: #d0dad5; white-space: pre-line; }
 
@@ -396,12 +396,23 @@
                 }
             }
 
+            // --- ОБНОВЛЕНИЕ: Проверка имени суры и использование справочника ---
+            sNum = parseInt(sNum);
+            if (!sName || sName.trim() === "" || sName.trim().toLowerCase() === "сура") {
+                if (typeof getSurahName === 'function') {
+                    sName = getSurahName(sNum) || sName;
+                }
+            }
+
             if (reader) reader = reader.replace(/^(Чтец:\s*|Чтец_)/i, "").trim();
             else reader = "Общий";
 
+            // --- ОБНОВЛЕНИЕ: Использование audioUrl с фоллбэком на audio ---
+            let finalAudioUrl = val.audioUrl || val.audio;
+
             dbTracks.push({
-                id: trackId, surahNum: parseInt(sNum), surahName: sName,
-                reader: reader, part: parseInt(part), audio: val.audio
+                id: trackId, surahNum: sNum, surahName: sName,
+                reader: reader, part: parseInt(part), audio: finalAudioUrl
             });
         });
 
@@ -601,7 +612,6 @@
         });
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ КАРАОКЕ
     function loadKaraokeMarkup(trackId) {
         const container = document.getElementById('karaokeContainer');
         container.innerHTML = "<p style='text-align:center; color:var(--text-muted); font-size:14px;'>Загрузка временных меток...</p>";
@@ -618,7 +628,6 @@
             const data = snap.val();
             let rawTimings = data.timings || [];
             
-            // Нормализация массива: если Firebase вернул "дырявый" массив как объект, превращаем обратно в настоящий массив
             let safeTimingsArray = [];
             if (Array.isArray(rawTimings)) {
                 safeTimingsArray = rawTimings;
@@ -635,7 +644,6 @@
             };
 
             let cleanText = currentMarkup.text.trim();
-            // Надежное разбиение текста: по пробелам, если они есть
             let tokens = cleanText.includes(' ') ? cleanText.split(/\s+/) : cleanText.split('');
             
             tokens.forEach((token, idx) => {
@@ -691,7 +699,6 @@
         }
     }
 
-    // ИСПРАВЛЕННАЯ ЛОГИКА СИНХРОНИЗАЦИИ ВОСПРОИЗВЕДЕНИЯ КАРАОКЕ
     mainPlayer.addEventListener('timeupdate', () => {
         const currentTime = mainPlayer.currentTime;
 
@@ -719,7 +726,6 @@
 
             const startTime = timings[i];
             
-            // Умный расчет окончания слова: ищем следующее существующее слово, даже если пропущено несколько
             let endTime = duration;
             for (let j = i + 1; j < timings.length; j++) {
                 if (timings[j] !== null && timings[j] !== undefined) {

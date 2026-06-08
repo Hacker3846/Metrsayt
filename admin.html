@@ -7,13 +7,16 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script src="list_surah.js"></script>
+
     <style>
         :root { 
-            --primary: #12513f; /* Глубокий исламский зеленый */
+            --primary: #12513f; 
             --primary-light: #1b6b54; 
-            --accent: #c5a880; /* Благородное матовое золото */
-            --bg: #0b110e; /* Очень темный малахитовый оттенок фона */
-            --card: #141f1a; /* Теплый темный фон для блоков */
+            --accent: #c5a880; 
+            --bg: #0b110e; 
+            --card: #141f1a; 
             --text-muted: #8fa099;
         }
         
@@ -243,27 +246,28 @@
     <h2>HIFZ CENTRAL MANAGEMENT SYSTEM</h2>
 
     <div class="admin-tabs">
-        <button class="admin-tab-btn active" onclick="switchPanel(0)">1. Аудио Сур (Масс)</button>
+        <button class="admin-tab-btn active" onclick="switchPanel(0)">1. Ссылки Сур (GitHub)</button>
         <button class="admin-tab-btn" onclick="switchPanel(1)">2. ZIP Мусхаф (Картинки)</button>
         <button class="admin-tab-btn" onclick="switchPanel(2)">3. Переводы Текст</button>
         <button class="admin-tab-btn" onclick="switchPanel(3)">4. Хадисы Дня</button>
     </div>
 
     <div id="panel0" class="panel-content active card">
-        <h3>МАССОВАЯ ЗАГРУЗКА АУДИО ФАЙЛОВ СУР</h3>
+        <h3>ИМПОРТ АУДИО (ИЗ ПАПОК И ПО ССЫЛКАМ С GITHUB)</h3>
         <span class="info-text">
-            Поддерживаются любые названия. Автоматический парсинг:<br>
-            • <b>Мут'оффифин-83_Арби.mp3</b> ➡️ Сура: 83, Чтец: Арби, Часть: 0 (ID: 083_0)<br>
-            • <b>(1)Мут'оффифин-83_Арби.mp3</b> ➡️ Сура: 83, Чтец: Арби, Часть: 1 (ID: 083_1)
+            Можно вставить <b>ссылку на папку GitHub</b> (например: <i>github.com/Hacker3846/Metrsayt/tree/main/Суры</i>) или прямые ссылки на аудио (каждая с новой строки).<br>
+            Автоматический парсинг поддерживает форматы:<br>
+            • <b>0831АрбиАшШишани.opus</b> ➡️ Сура 83, Часть 1, Чтец: АрбиАшШишани<br>
+            • <b>083_АрбиАшШишани.opus</b> ➡️ Сура 83, Часть 1 (авто), Чтец: АрбиАшШишани<br>
+            • <b>83.opus</b> ➡️ Сура 83, Часть 1, Чтец: Общий
         </span>
         
-        <div id="audioDropZone" class="drop-zone" onclick="document.getElementById('audioFileInput').click()">
-            <p>Перетащите аудиофайлы (.mp3, .opus, .wav) группами<br><span style="font-size:12px;font-weight:normal;color:var(--text-muted);">или нажмите для выбора</span></p>
-            <input type="file" id="audioFileInput" multiple accept="audio/*" style="display:none;" onchange="handleAudioFiles(this.files)">
-        </div>
-        <div id="audioGlobalStatus" class="status-box">Ожидание файлов...</div>
+        <textarea id="githubLinksInput" placeholder="Вставьте ссылку на папку GitHub (tree/main/...) или список ссылок на аудио..."></textarea>
+        <button id="btnAnalyzeLinks" onclick="analyzeLinks()">АНАЛИЗИРОВАТЬ ПАПКУ / ССЫЛКИ</button>
+        
         <div id="audioQueueContainer" class="preview-box" style="display:none;"></div>
-        <button id="btnStartAudioUpload" disabled onclick="startAudioBatchUpload()">ЗАПУСТИТЬ МАССОВУЮ ЗАГРУЗКУ АУДИО</button>
+        <div id="audioGlobalStatus" class="status-box">Ожидание ссылок...</div>
+        <button id="btnStartAudioUpload" disabled onclick="startLinksBatchUpload()">СОХРАНИТЬ ДАННЫЕ В БАЗУ</button>
 
         <h4 style="text-align:left; margin-top:20px; color:var(--accent);">Аудиофайлы в базе данных:</h4>
         <div id="audioTracksList" class="scroll-box">Загрузка списка...</div>
@@ -315,147 +319,212 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
+    // Заглушка для функции из list_surah.js
+    function getSafeSurahName(num) {
+        if (typeof getSurahName === 'function') {
+            return getSurahName(num) || "Неизвестная Сура";
+        }
+        return "Сура " + num;
+    }
+
     function switchPanel(idx) {
         document.querySelectorAll('.admin-tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
         document.querySelectorAll('.panel-content').forEach((panel, i) => panel.classList.toggle('active', i === idx));
     }
 
-    function readFileAsBase64(file) {
-        return new Promise((res, rej) => {
-            const r = new FileReader(); r.onload = (e) => res(e.target.result); r.onerror = rej; r.readAsDataURL(file);
-        });
-    }
+    // =========================================================================
+    // ПАРСИНГ ССЫЛОК И ИМЕН АУДИО (ДЛЯ ВСЕХ УКАЗАННЫХ ФОРМАТОВ)
+    // =========================================================================
+    function parseAudioName(url) {
+        url = url.trim();
+        if (!url) return null;
 
-    // =========================================================================
-    // ПАРСИНГ ИМЕН АУДИОФАЙЛОВ (ПОД ТРЕБОВАНИЯ ТРЕХ СЕЛЕКТОВ)
-    // =========================================================================
-    function parseAudioFileName(filename) {
-        // Очищаем от расширения
-        let clean = filename.replace(/\.[^/.]+$/, "").trim();
+        let filename = decodeURIComponent(url.split('/').pop());
+        let clean = filename.replace(/\.[^/.]+$/, "").trim(); // Убираем расширение
         
-        // 1. Извлекаем часть из скобок в начале строки, если она есть
-        let part = 0;
-        let partMatch = clean.match(/^\((\d+)\)/);
-        if (partMatch) {
-            part = parseInt(partMatch[1]);
-            clean = clean.replace(/^\(\d+\)/, "").trim();
-        }
-
-        // 2. Выделяем чтеца (все, что после последнего символа подчёркивания)
-        let reader = "Неизвестный";
-        if (clean.includes('_')) {
-            let lastUnderscore = clean.lastIndexOf('_');
-            reader = clean.substring(lastUnderscore + 1).trim();
-            clean = clean.substring(0, lastUnderscore).trim(); // Остается имя суры и номер
-        }
-
-        // Очищаем имя чтеца от возможных префиксов "Чтец:"
-        reader = reader.replace(/^(Чтец:\s*|Чтец_)/i, "").trim();
-
-        // 3. Выделяем номер суры и её название (например, Мут'оффифин-83 или 83-Мут'оффифин)
         let surahNum = 0;
-        let surahName = clean;
+        let part = 1; 
+        let reader = "Общий"; 
 
-        let numMatch = clean.match(/-(\d+)$/) || clean.match(/^(\d+)-/);
-        if (numMatch) {
-            surahNum = parseInt(numMatch[1]);
-            // Удаляем номер из названия, чтобы получить чистое текстовое имя
-            surahName = clean.replace(numMatch[0], "").replace(/^-|-$/, "").trim();
-        } else {
-            // Фолбэк на случай, если дефиса нет, но цифры в строке присутствуют
-            let standaloneNumMatch = clean.match(/\d+/);
-            if (standaloneNumMatch) {
-                surahNum = parseInt(standaloneNumMatch[0]);
-                surahName = clean.replace(standaloneNumMatch[0], "").trim();
+        // Проверяем формат с подчеркиванием: 083_АрбиАшШишани
+        if (clean.includes('_')) {
+            const parts = clean.split('_');
+            reader = parts.slice(1).join('_'); // Все после первого "_" это чтец
+            
+            let numPart = parts[0];
+            // На всякий случай поддерживаем и твой старый формат 089-1
+            if (numPart.includes('-')) {
+                let nums = numPart.split('-');
+                surahNum = parseInt(nums[0], 10);
+                part = parseInt(nums[1], 10) || 1;
+            } else {
+                surahNum = parseInt(numPart, 10);
+            }
+        } 
+        // Проверяем слитный формат: 0831АрбиАшШишани
+        else if (/^\d+[а-яА-Яa-zA-Z]/.test(clean)) {
+            let match = clean.match(/^(\d+)/);
+            if (match) {
+                let digits = match[1];
+                reader = clean.substring(digits.length); // Текст после цифр - чтец
+                
+                if (digits.length > 1) {
+                    part = parseInt(digits.slice(-1), 10); // Последняя цифра - часть
+                    surahNum = parseInt(digits.slice(0, -1), 10); // Все остальные цифры - сура
+                } else {
+                    surahNum = parseInt(digits, 10);
+                }
             }
         }
+        // Формат только цифры: 83
+        else if (/^\d+$/.test(clean)) {
+            surahNum = parseInt(clean, 10);
+        }
+
+        if (!surahNum || isNaN(surahNum)) return null;
 
         return {
-            surahNum: surahNum || 999,
-            surahName: surahName || "Неизвестная Сура",
+            audioUrl: url,
+            surahNum: surahNum,
+            surahName: getSafeSurahName(surahNum),
             reader: reader,
             part: part
         };
     }
 
-    // ==========================================
-    // ЛОГИКА ВКЛАДКИ 1: МАССОВАЯ ЗАГРУЗКА АУДИО
-    // ==========================================
-    let audioFilesQueue = [];
-    const audioDropZone = document.getElementById('audioDropZone');
+    // =========================================================================
+    // ИНТЕГРАЦИЯ GITHUB API: ПОЛУЧЕНИЕ ФАЙЛОВ ИЗ ПАПКИ
+    // =========================================================================
+    async function fetchGithubFolderContents(folderUrl) {
+        // Парсим ссылку на папку (пример: https://github.com/Hacker3846/Metrsayt/tree/main/Суры...)
+        const regex = /github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)\/(.+)/i;
+        const match = folderUrl.match(regex);
+        
+        if (!match) return []; // Если это не ссылка на папку GitHub, возвращаем пусто
+        
+        const owner = match[1];
+        const repo = match[2];
+        const branch = match[3];
+        const folderPath = match[4]; // Оставляем закодированным как есть
 
-    ['dragenter', 'dragover'].forEach(ev => audioDropZone.addEventListener(ev, (e) => { e.preventDefault(); audioDropZone.classList.add('hover'); }, false));
-    ['dragleave', 'drop'].forEach(ev => audioDropZone.addEventListener(ev, (e) => { e.preventDefault(); audioDropZone.classList.remove('hover'); }, false));
-    audioDropZone.addEventListener('drop', (e) => { e.preventDefault(); handleAudioFiles(e.dataTransfer.files); }, false);
-
-    function handleAudioFiles(files) {
-        if(files.length === 0) return;
-        audioFilesQueue = [];
-        const container = document.getElementById('audioQueueContainer');
-        container.innerHTML = "<b>Анализ структуры файлов перед отправкой:</b><br>";
-        container.style.display = "block";
-
-        for(let i=0; i<files.length; i++) {
-            const f = files[i];
-            const parsed = parseAudioFileName(f.name);
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${folderPath}?ref=${branch}`;
+        
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error("Ошибка API GitHub: " + response.statusText);
             
-            // Генерируем жесткий trackId для базы данных: сура с падингом из трех цифр + нижнее подчёркивание + часть
-            let paddedSurah = String(parsed.surahNum).padStart(3, '0');
-            let trackId = `${paddedSurah}_${parsed.part}`;
+            const data = await response.json();
+            if (!Array.isArray(data)) return [];
 
-            audioFilesQueue.push({ 
-                file: f, 
-                trackId: trackId,
-                meta: parsed
-            });
-
-            container.innerHTML += `
-                <div style="margin-bottom: 4px; border-bottom: 1px solid #23392e; padding-bottom:2px;">
-                    📁 ${f.name} <br>
-                    ➡️ <span style="color:var(--accent)">Сура ${parsed.surahNum} (${parsed.surahName})</span> | 
-                    Чтец: <span style="color:#fff">${parsed.reader}</span> | 
-                    Часть: <span style="color:#fff">${parsed.part}</span> 
-                    <small style="color:var(--text-muted)">(ID пути: surahs/${trackId})</small>
-                </div>`;
+            // Фильтруем только файлы аудио (opus, mp3, m4a, wav и т.д.)
+            return data
+                .filter(item => item.type === 'file' && /\.(opus|mp3|m4a|wav|ogg)$/i.test(item.name))
+                .map(item => item.download_url); // Берем прямые ссылки на скачивание
+        } catch (error) {
+            console.error("Ошибка при получении папки с GitHub:", error);
+            alert("Не удалось загрузить файлы из папки GitHub. Проверьте ссылку (репозиторий должен быть публичным).");
+            return [];
         }
-        document.getElementById('audioGlobalStatus').textContent = `Готово к импорту: ${audioFilesQueue.length} файлов`;
-        document.getElementById('btnStartAudioUpload').disabled = false;
     }
 
-    async function startAudioBatchUpload() {
+    // ==========================================
+    // ЛОГИКА ВКЛАДКИ 1: АНАЛИЗ И ИМПОРТ
+    // ==========================================
+    let parsedLinksQueue = [];
+
+    async function analyzeLinks() {
+        const text = document.getElementById('githubLinksInput').value.trim();
+        if (!text) {
+            alert("Вставьте ссылку на папку или список ссылок!");
+            return;
+        }
+
+        const btn = document.getElementById('btnAnalyzeLinks');
+        const status = document.getElementById('audioGlobalStatus');
+        const container = document.getElementById('audioQueueContainer');
+        
+        btn.disabled = true;
+        status.textContent = "Анализируем ссылки...";
+        parsedLinksQueue = [];
+        container.innerHTML = "<b>Анализ:</b><br>";
+        container.style.display = "block";
+
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+        let finalUrlsToProcess = [];
+
+        for (let line of lines) {
+            if (line.includes('/tree/')) {
+                // Если это ссылка на папку GitHub, вытягиваем из нее все файлы
+                container.innerHTML += `<div style="color:var(--accent);">📁 Загружаем содержимое папки GitHub...</div>`;
+                const folderFiles = await fetchGithubFolderContents(line);
+                finalUrlsToProcess = finalUrlsToProcess.concat(folderFiles);
+            } else {
+                // Если это обычная прямая ссылка
+                finalUrlsToProcess.push(line);
+            }
+        }
+
+        // Теперь парсим все собранные URL
+        finalUrlsToProcess.forEach(url => {
+            const parsed = parseAudioName(url);
+            if (parsed && parsed.audioUrl) {
+                // Создаем уникальный ID для базы (например: 083_1_АрбиАшШишани)
+                let paddedSurah = String(parsed.surahNum).padStart(3, '0');
+                let readerSafeId = parsed.reader.replace(/[^a-zA-Zа-яА-Я0-9_]/g, '');
+                let trackId = `${paddedSurah}_${parsed.part}_${readerSafeId}`;
+
+                parsedLinksQueue.push({ trackId, meta: parsed });
+
+                container.innerHTML += `
+                    <div style="margin-bottom: 4px; border-bottom: 1px solid #23392e; padding-bottom:2px;">
+                        🎵 <span style="color:var(--accent)">Сура ${parsed.surahNum} (${parsed.surahName})</span> | 
+                        Чтец: <span style="color:#fff">${parsed.reader}</span> | 
+                        Часть: <span style="color:#fff">${parsed.part}</span> 
+                        <br><small style="color:var(--text-muted)">${parsed.audioUrl}</small>
+                    </div>`;
+            }
+        });
+
+        if (parsedLinksQueue.length > 0) {
+            status.textContent = `Готово к импорту: ${parsedLinksQueue.length} аудиофайлов`;
+            document.getElementById('btnStartAudioUpload').disabled = false;
+        } else {
+            status.textContent = `Аудиофайлы не найдены или формат не распознан.`;
+            document.getElementById('btnStartAudioUpload').disabled = true;
+        }
+        btn.disabled = false;
+    }
+
+    async function startLinksBatchUpload() {
         const btn = document.getElementById('btnStartAudioUpload');
         btn.disabled = true;
-        audioDropZone.style.pointerEvents = "none";
 
-        for(let i=0; i<audioFilesQueue.length; i++) {
-            const item = audioFilesQueue[i];
-            document.getElementById('audioGlobalStatus').textContent = `Загрузка: ${i+1} из ${audioFilesQueue.length} (${item.meta.surahName})...`;
+        for(let i=0; i<parsedLinksQueue.length; i++) {
+            const item = parsedLinksQueue[i];
+            document.getElementById('audioGlobalStatus').textContent = `Загрузка в БД: ${i+1} из ${parsedLinksQueue.length}...`;
             
             try {
-                if(item.file.size > 14 * 1024 * 1024) { throw new Error("Размер файла превышает ограничение базы данных!"); }
-                const b64 = await readFileAsBase64(item.file);
-                
-                // Сохраняем по строгому пути с сохранением всей метаинформации, не затрагивая /markup
                 await database.ref('surahs/' + item.trackId).update({
                     surahNum: item.meta.surahNum,
                     surahName: item.meta.surahName,
                     reader: item.meta.reader,
                     part: item.meta.part,
-                    audio: b64,
+                    audioUrl: item.meta.audioUrl,
                     timestamp: Date.now()
                 });
             } catch(e) {
                 console.error(e);
-                alert(`Ошибка при импорте "${item.file.name}": ` + e.message);
+                alert(`Ошибка при сохранении ID "${item.trackId}": ` + e.message);
             }
         }
-        document.getElementById('audioGlobalStatus').textContent = "🎉 Все аудиофайлы успешно загружены в систему!";
+        
+        document.getElementById('audioGlobalStatus').textContent = "🎉 Все файлы успешно занесены в базу данных!";
         document.getElementById('audioQueueContainer').style.display = "none";
-        audioDropZone.style.pointerEvents = "auto";
-        audioFilesQueue = [];
+        document.getElementById('githubLinksInput').value = "";
+        parsedLinksQueue = [];
     }
 
-    // Слушатель списка аудиофайлов в реальном времени
+    // Слушатель списка аудиоссылок в реальном времени
     database.ref('surahs').on('value', (snap) => {
         const list = document.getElementById('audioTracksList');
         list.innerHTML = "";
@@ -464,25 +533,24 @@
         let displayList = [];
         snap.forEach(child => {
             let data = child.val();
-            // Поддержка отображения старых записей, если они были загружены в ином формате названия
-            let text = data.surahNum ? `[${data.surahNum}] ${data.surahName} — Чтец: ${data.reader} (Часть ${data.part})` : `Файл: ${data.name || child.key}`;
+            let text = data.surahNum ? `[${data.surahNum}] ${data.surahName} — Чтец: ${data.reader} (Часть ${data.part})` : `Файл: ${child.key}`;
             displayList.push({ 
                 key: child.key, 
                 text: text,
                 surahNum: data.surahNum || 999,
-                part: data.part || 0
+                part: data.part || 0,
+                url: data.audioUrl || "Без ссылки"
             });
         });
         
-        // Сортировка по номеру суры и частям
         displayList.sort((a,b) => a.surahNum - b.surahNum || a.part - b.part);
 
         displayList.forEach(item => {
             const div = document.createElement('div'); div.className = 'list-item';
-            div.innerHTML = `<span>${item.text} <br><small style="color:var(--text-muted)">Путь разметки: surahs/${item.key}/markup</small></span>`;
+            div.innerHTML = `<span>${item.text} <br><small style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; display:block; max-width:500px;">URL: ${item.url}</small></span>`;
             const dBtn = document.createElement('button'); dBtn.className='btn-del'; dBtn.textContent='Удалить';
             dBtn.onclick = () => { 
-                if(confirm(`ВНИМАНИЕ: Удаление сотрет аудиофайл!\nУдалить "${item.text}"?`)) {
+                if(confirm(`Удалить запись "${item.text}" из базы?`)) {
                     database.ref('surahs/'+item.key).remove();
                 }
             };
