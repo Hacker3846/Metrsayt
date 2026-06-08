@@ -940,6 +940,79 @@
             content.classList.toggle('active', idx === tabIndex);
         });
     }
+    // =====================================================================
+// БЛОК АНАЛИТИКИ УСТРОЙСТВ И ЗАПУСКОВ (ДОБАВИТЬ В КОНЕЦ СКРИПТА)
+// =====================================================================
+
+let hasTrackedPlay = false; // Флаг-защелка для одного трекинга на суру
+
+// Сбрасываем флаг трекинга, когда пользователь выбирает другую суру в списке
+document.getElementById('surahSelect').addEventListener('change', () => {
+    hasTrackedPlay = false;
+});
+
+// Дополнительно перехватываем вызовы оригинальной функции для сброса флага
+const originalLoadSurahData = window.loadSurahData;
+if (typeof originalLoadSurahData === 'function') {
+    window.loadSurahData = function(id, startTime = 0, autoplay = false) {
+        hasTrackedPlay = false; // Сброс при любом переключении трека
+        return originalLoadSurahData(id, startTime, autoplay);
+    };
+}
+
+// Отслеживание нажатия на кнопку Play в плеере
+mainPlayer.addEventListener('play', () => {
+    const currentSurahId = document.getElementById('surahSelect').value;
+    if (!currentSurahId || hasTrackedPlay) return; // Игнорируем, если сура не выбрана или уже посчитана
+
+    const track = allSurahs.find(s => s.id === currentSurahId);
+    if (!track) return;
+
+    // Генерируем или берем существующий ID устройства
+    let deviceId = localStorage.getItem('hifz_device_id');
+    if (!deviceId) {
+        deviceId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
+        localStorage.setItem('hifz_device_id', deviceId);
+    }
+
+    // Записываем факт воспроизведения в Firebase
+    database.ref('app_analytics/plays').push({
+        deviceId: deviceId,
+        surahId: track.id,
+        surahName: track.meta.surahName,
+        part: track.meta.part,
+        reciter: track.meta.reciter,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        hasTrackedPlay = true; // Блокируем повторные отправки для этой суры
+        console.log('📊 Аналитика: Прослушивание зафиксировано в БД.');
+    }).catch(err => console.error('Ошибка аналитики Firebase:', err));
+});
+
+// Маленькая команда для консоли браузера
+window.getStats = function() {
+    database.ref('app_analytics/plays').get().then(snap => {
+        if(!snap.exists()) {
+            console.log('%cБаза аналитики пуста.', 'color: #text-muted;');
+            return;
+        }
+        
+        const data = snap.val();
+        const uniqueDevices = new Set();
+        let totalPlays = 0;
+
+        Object.values(data).forEach(record => {
+            if(record.deviceId) uniqueDevices.add(record.deviceId);
+            totalPlays++;
+        });
+
+        // Красивый и компактный вывод результатов в консоль
+        console.log(`%c📊 СТАТИСТИКА HIFZ:`, 'color: #c5a880; font-weight: bold; font-size: 14px; background: #141f1a; padding: 4px 8px; border-radius: 4px;');
+        console.log(`📱 Уникальных устройств зашло: %c${uniqueDevices.size}`, 'color: #00ff00; font-weight: bold; font-size: 13px;');
+        console.log(`▶ Всего нажатий на Play: %c${totalPlays}`, 'color: #cbd6d0; font-weight: bold;');
+    }).catch(err => console.error('Не удалось загрузить данные из Firebase:', err));
+};
+
 </script>
 </body>
 </html>
