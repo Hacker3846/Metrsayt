@@ -396,7 +396,6 @@
                 }
             }
 
-            // --- ОБНОВЛЕНИЕ: Проверка имени суры и использование справочника ---
             sNum = parseInt(sNum);
             if (!sName || sName.trim() === "" || sName.trim().toLowerCase() === "сура") {
                 if (typeof getSurahName === 'function') {
@@ -407,7 +406,6 @@
             if (reader) reader = reader.replace(/^(Чтец:\s*|Чтец_)/i, "").trim();
             else reader = "Общий";
 
-            // --- ОБНОВЛЕНИЕ: Использование audioUrl с фоллбэком на audio ---
             let finalAudioUrl = val.audioUrl || val.audio;
 
             dbTracks.push({
@@ -455,15 +453,23 @@
         }
     });
 
+    // 🔴 ИСПРАВЛЕНИЕ 1: ПОИСК С ФИДБЕКОМ
     function sortAndRenderSurahSelect() {
         const select = document.getElementById('surahSelect');
         const savedVal = select.value;
-        select.innerHTML = '<option value="" disabled selected>-- Сура --</option>';
         
         let filtered = [...uniqueSurahsList];
         if(searchQuery.trim() !== "") {
             const q = searchQuery.toLowerCase().trim();
             filtered = filtered.filter(s => s.name.toLowerCase().includes(q) || String(s.num).includes(q));
+            
+            if (filtered.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>❌ Ничего не найдено</option>';
+            } else {
+                select.innerHTML = `<option value="" disabled selected>✅ Найдено: ${filtered.length} (Нажмите)</option>`;
+            }
+        } else {
+            select.innerHTML = '<option value="" disabled selected>-- Выберите суру --</option>';
         }
 
         filtered.sort((a, b) => isReversed ? b.num - a.num : a.num - b.num);
@@ -483,9 +489,14 @@
     function onSurahChanged(surahNum) {
         if(!surahNum) { hideCascadeBlocks(); return; }
         selectedSurahNum = parseInt(surahNum);
+        
+        // 🔴 ИСПРАВЛЕНИЕ 2: ПРИНУДИТЕЛЬНО ВЫКЛЮЧАЕМ СТАРЫЙ ТРЕК
+        mainPlayer.pause(); 
+        
         buildReaderCascade(selectedSurahNum);
     }
 
+    // 🔴 ИСПРАВЛЕНИЕ 2: АВТОВЫБОР ЧТЕЦА "ОБЩИЙ"
     function buildReaderCascade(surahNum) {
         const container = document.getElementById('readerInterfaceContainer');
         const block = document.getElementById('readerCascadeBlock');
@@ -497,6 +508,9 @@
         if(uniqueReaders.length === 0) { hideCascadeBlocks(); return; }
         block.style.display = "block";
 
+        // Проверяем, есть ли Общий чтец. Если да, делаем его дефолтным.
+        let defaultReader = uniqueReaders.includes("Общий") ? "Общий" : uniqueReaders[0];
+
         if(uniqueReaders.length === 1) {
             selectedReaderName = uniqueReaders[0];
             container.innerHTML = `<div class="single-reader-box"><span>${selectedReaderName}</span></div>`;
@@ -504,13 +518,17 @@
         } else {
             const select = document.createElement('select');
             select.id = "readerSelect";
-            select.innerHTML = '<option value="" disabled selected>-- Чтец --</option>';
             uniqueReaders.forEach(reader => {
                 const opt = document.createElement('option');
                 opt.value = reader;
                 opt.textContent = reader;
                 select.appendChild(opt);
             });
+            
+            // Выбираем чтеца "Общий" по умолчанию и сохраняем его
+            select.value = defaultReader; 
+            selectedReaderName = defaultReader;
+            
             select.onchange = (e) => {
                 if(!e.target.value) { document.getElementById('partCascadeBlock').style.display = "none"; return; }
                 selectedReaderName = e.target.value;
@@ -518,9 +536,13 @@
             };
             container.appendChild(select);
             document.getElementById('partCascadeBlock').style.display = "none";
+            
+            // Автоматически запускаем поиск частей для Общего чтеца
+            buildPartsCascade(surahNum, selectedReaderName);
         }
     }
 
+    // 🔴 ИСПРАВЛЕНИЕ 2: АВТОВЫБОР ПЕРВОЙ ЧАСТИ
     function buildPartsCascade(surahNum, readerName) {
         const block = document.getElementById('partCascadeBlock');
         const select = document.getElementById('partSelect');
@@ -528,6 +550,9 @@
 
         const tracks = dbTracks.filter(t => t.surahNum === surahNum && t.reader === readerName);
         tracks.sort((a,b) => a.part - b.part);
+
+        // Ищем первую часть (у тебя это 1 или 0)
+        let defaultPartObj = tracks.find(t => t.part === 1 || t.part === 0) || tracks[0];
 
         if (tracks.length <= 1) {
             block.style.display = "none";
@@ -541,8 +566,9 @@
                 opt.textContent = `[ ${userFriendlyPartNumber} ] часть суры`;
                 select.appendChild(opt);
             });
-            select.value = tracks[0].part;
-            executeFinalTrackSelection(tracks[0].id);
+            // Ставим 1-ую часть по умолчанию и сразу запускаем её
+            select.value = defaultPartObj.part;
+            executeFinalTrackSelection(defaultPartObj.id);
         }
     }
 
@@ -563,6 +589,7 @@
         document.getElementById('currentTitle').textContent = "...";
     }
 
+    // 🔴 ИСПРАВЛЕНИЕ 3: ПРАВИЛЬНАЯ ЗАГРУЗКА МЕТАДАННЫХ ПРИ ОБНОВЛЕНИИ (F5)
     function loadTrackPlayback(id, startTime = 0, autoplay = false) {
         const track = dbTracks.find(t => t.id === id);
         if(!track) return;
@@ -582,10 +609,14 @@
         btnLoop.style.borderColor = "#c5a880";
 
         mainPlayer.src = track.audio;
-        mainPlayer.currentTime = startTime;
+        // Важно: перемотку нужно делать ТОЛЬКО когда аудио прогрузилось, иначе при F5 она слетает
         mainPlayer.onloadedmetadata = () => {
+            mainPlayer.currentTime = startTime; 
             if (startTime === 0) setInputs(mainPlayer.duration, endMin, endSec);
             if (autoplay) mainPlayer.play();
+            
+            // Принудительно вызываем подстветку для восстановленного времени
+            updateKaraokeHighlight(startTime);
         };
 
         localStorage.setItem('hifz_last_surah', id);
@@ -660,6 +691,12 @@
                 container.appendChild(span);
                 clientSpansCache.push(span); 
             });
+
+            // 🔴 ИСПРАВЛЕНИЕ 3: После отрисовки текста заставляем его подсветиться сразу же,
+            // не дожидаясь, пока плеер начнет играть (полезно при нажатии F5)
+            setTimeout(() => {
+                updateKaraokeHighlight(mainPlayer.currentTime);
+            }, 50);
         });
     }
 
@@ -699,22 +736,8 @@
         }
     }
 
-    mainPlayer.addEventListener('timeupdate', () => {
-        const currentTime = mainPlayer.currentTime;
-
-        if (mainPlayer.src && currentTime > 0) {
-            localStorage.setItem('hifz_last_time', currentTime);
-        }
-
-        if (isLooping) {
-            let start = (parseInt(startMin.value)||0)*60 + (parseFloat(startSec.value)||0);
-            let end = (parseInt(endMin.value)||0)*60 + (parseFloat(endSec.value)||0);
-            if (currentTime >= end || currentTime < start) {
-                mainPlayer.currentTime = start;
-                mainPlayer.play();
-            }
-        }
-
+    // 🔴 ИСПРАВЛЕНИЕ 3: Вынес логику подсветки караоке в отдельную функцию
+    function updateKaraokeHighlight(currentTime) {
         if (!currentMarkup || !currentMarkup.timings || clientSpansCache.length === 0) return;
         
         const timings = currentMarkup.timings;
@@ -752,6 +775,26 @@
                 span.classList.remove('highlight');
             }
         }
+    }
+
+    mainPlayer.addEventListener('timeupdate', () => {
+        const currentTime = mainPlayer.currentTime;
+
+        if (mainPlayer.src && currentTime > 0) {
+            localStorage.setItem('hifz_last_time', currentTime);
+        }
+
+        if (isLooping) {
+            let start = (parseInt(startMin.value)||0)*60 + (parseFloat(startSec.value)||0);
+            let end = (parseInt(endMin.value)||0)*60 + (parseFloat(endSec.value)||0);
+            if (currentTime >= end || currentTime < start) {
+                mainPlayer.currentTime = start;
+                mainPlayer.play();
+            }
+        }
+
+        // Вызываем функцию подсветки каждую миллисекунду, пока играет трек
+        updateKaraokeHighlight(currentTime);
     });
 
     function switchTab(tabIndex) {
