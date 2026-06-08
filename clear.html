@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIFZ — Сброс Базы Данных</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --bg: #0b110e; 
+            --card: #141f1a; 
+            --danger: #7a1f1f;
+            --danger-hover: #a32929;
+            --accent: #ff8888;
+            --text: #f0f4f2;
+            --text-muted: #8fa099;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        .reset-container { 
+            width: 100%; 
+            max-width: 550px; 
+            background: var(--card); 
+            padding: 40px 30px; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7); 
+            border: 2px solid rgba(255, 68, 68, 0.2);
+            text-align: center;
+        }
+        
+        h1 {
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 24px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .warning-box {
+            background: rgba(122, 31, 31, 0.15);
+            border: 1px solid var(--danger);
+            padding: 15px;
+            border-radius: 12px;
+            color: #ffaaaa;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .btn-nuke { 
+            width: 100%; 
+            padding: 20px; 
+            border-radius: 16px; 
+            font-weight: bold; 
+            background: var(--danger); 
+            border: 2px solid var(--accent); 
+            color: #fff; 
+            cursor: pointer; 
+            font-size: 16px; 
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(255, 68, 68, 0.2);
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        
+        .btn-nuke:hover {
+            background: var(--danger-hover);
+            box-shadow: 0 6px 25px rgba(255, 68, 68, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-nuke:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-nuke:disabled { 
+            background: #1a1a1a; 
+            border-color: #333;
+            color: #555;
+            cursor: not-allowed; 
+            box-shadow: none;
+            transform: none;
+        }
+        
+        .status { 
+            margin-top: 25px;
+            font-size: 14px; 
+            font-weight: bold; 
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="reset-container">
+    <h1>Уничтожение Базы Данных</h1>
+    
+    <div class="warning-box">
+        ⚠️ ВНИМАНИЕ: Это действие полностью сотрет ветки аудиофайлов, изображений Мусхафа, переводов и хадисов. Основной сайт мгновенно опустеет. Восстановление данных невозможно!
+    </div>
+
+    <p>Нажмите на кнопку ниже, чтобы полностью очистить Realtime Database до самого основания (корень куста будет удален).</p>
+
+    <button class="btn-nuke" id="nukeBtn" onclick="triggerAbsoluteReset()">🔥 Стереть базу до основания</button>
+    
+    <div id="statusText" class="status">Статус: Ожидание команды</div>
+</div>
+
+<script>
+    // Конфигурация твоей базы данных
+    const firebaseConfig = { 
+        databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" 
+    };
+    
+    // Инициализация
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    function triggerAbsoluteReset() {
+        const btn = document.getElementById('nukeBtn');
+        const status = document.getElementById('statusText');
+
+        // Шаг 1: Первое предупреждение
+        const check1 = confirm("ВНИМАНИЕ! Вы собираетесь очистить ВСЮ базу данных Firebase?\n\nЭто уничтожит весь контент на втором сайте.");
+        
+        if (check1) {
+            // Шаг 2: Второе жесткое предупреждение
+            const check2 = confirm("ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nВы АБСОЛЮТНО уверены? Назад дороги не будет.");
+            
+            if (check2) {
+                btn.disabled = true;
+                status.style.color = "#ff4444";
+                status.textContent = "Статус: Выполнение полной очистки...";
+
+                // Удаляем корневой узел базы данных
+                database.ref('/').remove()
+                    .then(() => {
+                        status.style.color = "#44ff44";
+                        status.textContent = "💥 База данных успешно уничтожена до основания!";
+                        alert("Готово! Все таблицы удалены. База полностью пуста.");
+                        btn.disabled = false;
+                    })
+                    .catch((error) => {
+                        status.style.color = "#ff4444";
+                        status.textContent = "Ошибка: " + error.message;
+                        alert("Произошла ошибка при удалении: " + error.message);
+                        btn.disabled = false;
+                    });
+            }
+        }
+    }
+</script>
+</body>
+</html>

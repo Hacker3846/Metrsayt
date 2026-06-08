@@ -15,6 +15,7 @@
             --bg: #0b110e; 
             --card: #141f1a; 
             --text-muted: #8fa099;
+            --danger: #8b3a3a;
         }
         
         body { 
@@ -160,7 +161,7 @@
         .speed-control { background: #1a2922; padding: 10px 14px; border-radius: 10px; margin: 12px 0; display: flex; align-items: center; justify-content: space-between; }
         .speed-control label { font-size: 13px; color: var(--text-muted); }
         .speed-control input[type="range"] { flex-grow: 1; margin: 0 12px; accent-color: var(--accent); }
-        #speedVal { font-weight: bold; min-width: 35px; color: var(--accent); text-align: right; font-size: 13px; }
+        .val-indicator { font-weight: bold; min-width: 35px; color: var(--accent); text-align: right; font-size: 13px; }
 
         .loop-settings { display: flex; justify-content: space-between; margin-top: 12px; gap: 10px; }
         .time-group { background: #1a2922; padding: 12px; border-radius: 12px; width: 50%; box-sizing: border-box; border: 1px solid #283e34; }
@@ -170,9 +171,14 @@
         .input-sub span { display: block; font-size: 9px; color: var(--text-muted); margin-top: 2px; }
         input[type="number"] { background: #141f1a; color: #fff; border: 1px solid #283e34; padding: 6px; border-radius: 6px; width: 100%; text-align: center; box-sizing: border-box; font-size: 13px; }
         input[type="number"]:focus { border-color: var(--accent); outline: none; }
+        
         .btn-capture { background: #967342; font-size: 11px; padding: 8px; width: 100%; margin-top: 8px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.15s; }
         .btn-capture:active { background: var(--accent); }
+        
         .btn-main { background: var(--primary); width: 100%; font-size: 15px; margin-top: 15px; padding: 14px; border: 1px solid var(--accent); border-radius: 12px; color: var(--accent); font-weight: bold; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+        
+        /* Индикатор голоса */
+        .mic-active-pulse { box-shadow: 0 0 15px var(--accent); background: #3b2818 !important; border-color: #e0bc8c !important; color: #fff !important; }
 
         .tabs-header { display: flex; background: #1a2922; border-radius: 12px; padding: 4px; margin: 10px 0; border: 1px solid #283e34; }
         .tab-btn { flex: 1; background: none; border: none; color: var(--text-muted); padding: 12px; font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 8px; transition: 0.2s; }
@@ -248,7 +254,7 @@
         <div class="speed-control" style="margin-top: 0;">
             <label>Скорость чтения:</label>
             <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="changeSpeed(this.value)">
-            <span id="speedVal">1.0x</span>
+            <span class="val-indicator" id="speedVal">1.0x</span>
         </div>
 
         <div class="loop-settings">
@@ -284,6 +290,19 @@
         </div>
 
         <button class="btn-main" id="btnLoop" onclick="toggleLoop()">ВКЛЮЧИТЬ ПОВТОР: ВЫКЛ</button>
+        
+        <hr style="border-color:#283e34; margin:20px 0 10px 0;">
+        
+        <!-- НОВЫЙ БЛОК: УМНЫЙ МИКРОФОН -->
+        <button class="btn-main" id="btnSmartMic" style="margin-top: 5px;" onclick="toggleSmartMic()">🎙 ИНТЕРАКТИВ: ВЫКЛ</button>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Используйте наушники. Когда вы читаете, чтец ждёт.</p>
+        
+        <div class="speed-control" id="micControls" style="display: none; margin-top: 10px;">
+            <label>Чувствительность:</label>
+            <input type="range" id="micSlider" min="5" max="100" step="1" value="20" oninput="changeMicSensitivity(this.value)">
+            <span class="val-indicator" id="micVal">20</span>
+        </div>
+        
     </div>
 
     <div class="tabs-header">
@@ -336,6 +355,19 @@
     let selectedSurahNum = null;
     let selectedReaderName = null;
     let selectedTrackId = null;
+
+    // --- ПЕРЕМЕННЫЕ УМНОГО МИКРОФОНА ---
+    let isMicActive = false;
+    let audioContext;
+    let analyser;
+    let microphone;
+    let micStream;
+    let micSensitivity = 20; // Порог громкости
+    let silenceTimer = null;
+    let isUserSpeaking = false;
+    let wasTrackPlaying = false; // Чтобы не запустить плеер, если пользователь сам поставил его на паузу
+    const btnSmartMic = document.getElementById('btnSmartMic');
+    // -----------------------------------
 
     const mainPlayer = document.getElementById('mainPlayer');
     const liveStickyContainer = document.getElementById('liveStickyContainer');
@@ -453,7 +485,6 @@
         }
     });
 
-    // 🔴 ИСПРАВЛЕНИЕ 1: ПОИСК С ФИДБЕКОМ
     function sortAndRenderSurahSelect() {
         const select = document.getElementById('surahSelect');
         const savedVal = select.value;
@@ -490,13 +521,10 @@
         if(!surahNum) { hideCascadeBlocks(); return; }
         selectedSurahNum = parseInt(surahNum);
         
-        // 🔴 ИСПРАВЛЕНИЕ 2: ПРИНУДИТЕЛЬНО ВЫКЛЮЧАЕМ СТАРЫЙ ТРЕК
         mainPlayer.pause(); 
-        
         buildReaderCascade(selectedSurahNum);
     }
 
-    // 🔴 ИСПРАВЛЕНИЕ 2: АВТОВЫБОР ЧТЕЦА "ОБЩИЙ"
     function buildReaderCascade(surahNum) {
         const container = document.getElementById('readerInterfaceContainer');
         const block = document.getElementById('readerCascadeBlock');
@@ -508,7 +536,6 @@
         if(uniqueReaders.length === 0) { hideCascadeBlocks(); return; }
         block.style.display = "block";
 
-        // Проверяем, есть ли Общий чтец. Если да, делаем его дефолтным.
         let defaultReader = uniqueReaders.includes("Общий") ? "Общий" : uniqueReaders[0];
 
         if(uniqueReaders.length === 1) {
@@ -525,7 +552,6 @@
                 select.appendChild(opt);
             });
             
-            // Выбираем чтеца "Общий" по умолчанию и сохраняем его
             select.value = defaultReader; 
             selectedReaderName = defaultReader;
             
@@ -537,12 +563,10 @@
             container.appendChild(select);
             document.getElementById('partCascadeBlock').style.display = "none";
             
-            // Автоматически запускаем поиск частей для Общего чтеца
             buildPartsCascade(surahNum, selectedReaderName);
         }
     }
 
-    // 🔴 ИСПРАВЛЕНИЕ 2: АВТОВЫБОР ПЕРВОЙ ЧАСТИ
     function buildPartsCascade(surahNum, readerName) {
         const block = document.getElementById('partCascadeBlock');
         const select = document.getElementById('partSelect');
@@ -551,7 +575,6 @@
         const tracks = dbTracks.filter(t => t.surahNum === surahNum && t.reader === readerName);
         tracks.sort((a,b) => a.part - b.part);
 
-        // Ищем первую часть (у тебя это 1 или 0)
         let defaultPartObj = tracks.find(t => t.part === 1 || t.part === 0) || tracks[0];
 
         if (tracks.length <= 1) {
@@ -566,7 +589,6 @@
                 opt.textContent = `[ ${userFriendlyPartNumber} ] часть суры`;
                 select.appendChild(opt);
             });
-            // Ставим 1-ую часть по умолчанию и сразу запускаем её
             select.value = defaultPartObj.part;
             executeFinalTrackSelection(defaultPartObj.id);
         }
@@ -589,7 +611,6 @@
         document.getElementById('currentTitle').textContent = "...";
     }
 
-    // 🔴 ИСПРАВЛЕНИЕ 3: ПРАВИЛЬНАЯ ЗАГРУЗКА МЕТАДАННЫХ ПРИ ОБНОВЛЕНИИ (F5)
     function loadTrackPlayback(id, startTime = 0, autoplay = false) {
         const track = dbTracks.find(t => t.id === id);
         if(!track) return;
@@ -609,13 +630,10 @@
         btnLoop.style.borderColor = "#c5a880";
 
         mainPlayer.src = track.audio;
-        // Важно: перемотку нужно делать ТОЛЬКО когда аудио прогрузилось, иначе при F5 она слетает
         mainPlayer.onloadedmetadata = () => {
             mainPlayer.currentTime = startTime; 
             if (startTime === 0) setInputs(mainPlayer.duration, endMin, endSec);
             if (autoplay) mainPlayer.play();
-            
-            // Принудительно вызываем подстветку для восстановленного времени
             updateKaraokeHighlight(startTime);
         };
 
@@ -686,14 +704,13 @@
                 span.onclick = () => {
                     if(currentMarkup.timings[idx] !== undefined && currentMarkup.timings[idx] !== null) {
                         mainPlayer.currentTime = Number(currentMarkup.timings[idx]);
+                        if (isMicActive) wasTrackPlaying = true; // Фикс для ручного перехода
                     }
                 };
                 container.appendChild(span);
                 clientSpansCache.push(span); 
             });
 
-            // 🔴 ИСПРАВЛЕНИЕ 3: После отрисовки текста заставляем его подсветиться сразу же,
-            // не дожидаясь, пока плеер начнет играть (полезно при нажатии F5)
             setTimeout(() => {
                 updateKaraokeHighlight(mainPlayer.currentTime);
             }, 50);
@@ -736,7 +753,125 @@
         }
     }
 
-    // 🔴 ИСПРАВЛЕНИЕ 3: Вынес логику подсветки караоке в отдельную функцию
+    // --- ФУНКЦИИ УМНОГО МИКРОФОНА ---
+    
+    // Переключение состояния
+    async function toggleSmartMic() {
+        if (!isMicActive) {
+            try {
+                // Запрашиваем доступ к микрофону
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Настраиваем анализ аудио
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256; 
+                
+                microphone = audioContext.createMediaStreamSource(micStream);
+                microphone.connect(analyser);
+                
+                isMicActive = true;
+                wasTrackPlaying = !mainPlayer.paused; // Запоминаем, играл ли трек
+                
+                // Обновляем интерфейс
+                btnSmartMic.textContent = "🎙 ИНТЕРАКТИВ: АКТИВЕН";
+                btnSmartMic.style.background = "#1e5e3a";
+                btnSmartMic.style.borderColor = "#66bb6a";
+                document.getElementById('micControls').style.display = "flex";
+                
+                // Запускаем цикл прослушивания
+                listenToMicrophone();
+                
+            } catch (err) {
+                alert("Не удалось получить доступ к микрофону. Проверьте разрешения браузера.");
+                console.error("Ошибка доступа к микрофону: ", err);
+            }
+        } else {
+            // Выключаем функцию
+            isMicActive = false;
+            
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            
+            btnSmartMic.textContent = "🎙 ИНТЕРАКТИВ: ВЫКЛ";
+            btnSmartMic.style.background = "var(--primary)";
+            btnSmartMic.style.borderColor = "var(--accent)";
+            btnSmartMic.classList.remove('mic-active-pulse');
+            document.getElementById('micControls').style.display = "none";
+            
+            // Если мы ставили на паузу из-за микрофона, возвращаем проигрывание
+            if (isUserSpeaking && wasTrackPlaying) {
+                mainPlayer.play();
+            }
+            isUserSpeaking = false;
+        }
+    }
+
+    // Изменение порога чувствительности
+    function changeMicSensitivity(val) {
+        micSensitivity = parseInt(val);
+        document.getElementById('micVal').textContent = val;
+    }
+
+    // Главный цикл обработки звука
+    function listenToMicrophone() {
+        if (!isMicActive) return;
+        requestAnimationFrame(listenToMicrophone);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+
+        // Считаем средний уровень громкости
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+        }
+        let volume = sum / bufferLength;
+
+        // Если громкость превышает порог — пользователь читает
+        if (volume > micSensitivity) {
+            clearTimeout(silenceTimer); 
+            
+            if (!isUserSpeaking) {
+                isUserSpeaking = true;
+                btnSmartMic.classList.add('mic-active-pulse'); // Визуальный индикатор (Слушаю)
+                
+                // Сохраняем состояние плеера. Если он играл, ставим на паузу
+                if (!mainPlayer.paused) {
+                    wasTrackPlaying = true;
+                    mainPlayer.pause();
+                } else {
+                    // Если пользователь сам поставил на паузу до этого, не трогаем
+                    wasTrackPlaying = false; 
+                }
+            }
+        } else {
+            // Пользователь молчит
+            if (isUserSpeaking) {
+                // Ждем 700мс тишины, чтобы не перебивать паузы между словами
+                silenceTimer = setTimeout(() => {
+                    isUserSpeaking = false;
+                    btnSmartMic.classList.remove('mic-active-pulse');
+                    
+                    // Возвращаем воспроизведение только если трек играл ДО того, как мы начали говорить
+                    if (wasTrackPlaying && mainPlayer.paused && mainPlayer.src) {
+                        mainPlayer.play();
+                    }
+                }, 700);
+            }
+        }
+    }
+    
+    // Чтобы система не сходила с ума, если пользователь вручную нажимает play/pause
+    mainPlayer.addEventListener('play', () => { if(isMicActive && !isUserSpeaking) wasTrackPlaying = true; });
+    mainPlayer.addEventListener('pause', () => { if(isMicActive && !isUserSpeaking) wasTrackPlaying = false; });
+    // -----------------------------------
+
     function updateKaraokeHighlight(currentTime) {
         if (!currentMarkup || !currentMarkup.timings || clientSpansCache.length === 0) return;
         
@@ -793,7 +928,6 @@
             }
         }
 
-        // Вызываем функцию подсветки каждую миллисекунду, пока играет трек
         updateKaraokeHighlight(currentTime);
     });
 

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIFZ — Панель Аналитики V2</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { 
+            --primary: #12513f; 
+            --accent: #c5a880; 
+            --bg: #0b110e; 
+            --card: #141f1a; 
+            --text-muted: #8fa099;
+            --success: #66bb6a;
+            --danger: #e57373;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            color: #f0f4f2; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        
+        .container { 
+            width: 100%; 
+            max-width: 850px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+        }
+
+        h1 {
+            color: var(--accent);
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        /* Сетка главных показателей */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(197, 168, 128, 0.15);
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--success);
+            margin-top: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Блоки детальной аналитики */
+        .panel {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid rgba(197, 168, 128, 0.15);
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--accent);
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #283e34;
+            padding-bottom: 8px;
+        }
+
+        /* Элементы управления (формы и кнопки) */
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-input {
+            background: var(--bg);
+            border: 1px solid rgba(197, 168, 128, 0.3);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            flex-grow: 1;
+            min-width: 150px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--accent);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary:hover {
+            background: #186a52;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: 0.2s;
+            font-size: 12px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .action-btn.delete:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* Таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid #1a2922;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .count-badge {
+            background: var(--primary);
+            color: var(--accent);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .my-device-badge {
+            background: #3b2818;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 5px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .highlight-row {
+            background: rgba(197, 168, 128, 0.03);
+        }
+
+        /* Лента активности */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .activity-item {
+            background: #1a2922;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            border-left: 3px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .activity-time {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .loader {
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📊 HIFZ — Расширенная Аналитика</h1>
+    <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: -15px; margin-bottom: 10px;">
+        Данные обновляются в реальном времени
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">📱 Активные Устройства</div>
+            <div class="stat-value" id="uniqueDevicesCount">...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">▶ Всего воспроизведений</div>
+            <div class="stat-value" id="totalPlaysCount">...</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">👥 Управление и активность устройств</div>
+        
+        <div class="controls-row">
+            <input type="text" id="newDeviceId" class="form-input" placeholder="ID Устройства">
+            <input type="text" id="newDeviceName" class="form-input" placeholder="Понятное имя (напр. Планшет брата)">
+            <button class="btn-primary" onclick="addDevice()">➕ Добавить устройство</button>
+        </div>
+
+        <div id="devicesLoader" class="loader">Анализ устройств...</div>
+        <table id="devicesTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Пользователь / ID</th>
+                    <th>Последнее действие</th>
+                    <th>Прослушано</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="devicesBody"></tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">🏆 Популярные Суры (Топ-5)</div>
+        <div id="topSurahsLoader" class="loader">Загрузка данных...</div>
+        <table id="topSurahsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Название Суры</th>
+                    <th>Чтец</th>
+                    <th>Часть</th>
+                    <th>Прослушиваний</th>
+                </tr>
+            </thead>
+            <tbody id="topSurahsBody"></tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">🕒 Последние 5 кликов на сайте</div>
+        <div id="activityLoader" class="loader">Загрузка ленты...</div>
+        <div class="activity-list" id="activityLog"></div>
+    </div>
+</div>
+
+<script>
+    // Инициализация Firebase
+    const firebaseConfig = { databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Получаем ID текущего устройства
+    const myCurrentDeviceId = localStorage.getItem('hifz_device_id');
+
+    // Слушаем корневую ветку аналитики (и логи, и настройки устройств)
+    database.ref('app_analytics').on('value', (snap) => {
+        if(!snap.exists() || !snap.val().plays) {
+            document.getElementById('uniqueDevicesCount').textContent = "0";
+            document.getElementById('totalPlaysCount').textContent = "0";
+            document.getElementById('devicesLoader').textContent = "Устройств пока нет.";
+            document.getElementById('topSurahsLoader').textContent = "Данных пока нет.";
+            document.getElementById('activityLoader').textContent = "История пуста.";
+            return;
+        }
+
+        const data = snap.val();
+        const plays = data.plays || {};
+        const settings = data.device_settings || {};
+        
+        let totalPlays = 0;
+        const surahStats = {};
+        const deviceStats = {};
+        const activityArray = [];
+
+        // 1. Предварительно добавляем известные устройства из настроек (даже если у них еще 0 прослушиваний)
+        Object.keys(settings).forEach(dId => {
+            if (!settings[dId].isHidden) {
+                deviceStats[dId] = {
+                    id: dId,
+                    count: 0,
+                    lastSurah: '-',
+                    lastTimestamp: 0,
+                    name: settings[dId].name || null
+                };
+            }
+        });
+
+        // 2. Перебираем записи прослушиваний из БД
+        Object.values(plays).forEach(record => {
+            totalPlays++;
+            const dId = record.deviceId || 'unknown_device';
+
+            // Если устройство скрыто (удалено из списка), пропускаем его для таблиц (но в totalPlays оно посчиталось)
+            if (settings[dId] && settings[dId].isHidden) return;
+
+            if (!deviceStats[dId]) {
+                deviceStats[dId] = {
+                    id: dId,
+                    count: 0,
+                    lastSurah: record.surahName,
+                    lastTimestamp: record.timestamp || 0,
+                    name: null
+                };
+            }
+            deviceStats[dId].count++;
+            
+            // Обновляем информацию о последней суре
+            if (record.timestamp && record.timestamp > deviceStats[dId].lastTimestamp) {
+                deviceStats[dId].lastSurah = record.surahName;
+                deviceStats[dId].lastTimestamp = record.timestamp;
+            }
+
+            // Группируем для топа сур
+            const surahKey = `${record.surahName}_${record.reciter || 'Общий'}_${record.part || 0}`;
+            if(!surahStats[surahKey]) {
+                surahStats[surahKey] = {
+                    name: record.surahName,
+                    reciter: record.reciter || 'Общий',
+                    part: record.part || 0,
+                    count: 0
+                };
+            }
+            surahStats[surahKey].count++;
+
+            // Собираем ленту активности (только видимые устройства)
+            activityArray.push(record);
+        });
+
+        // --- Обновляем верхние счетчики ---
+        const uniqueDevicesCount = Object.keys(deviceStats).length;
+        document.getElementById('uniqueDevicesCount').textContent = uniqueDevicesCount;
+        document.getElementById('totalPlaysCount').textContent = totalPlays;
+
+        // --- РЕНДЕРИМ ТАБЛИЦУ УСТРОЙСТВ ---
+        const devicesBody = document.getElementById('devicesBody');
+        devicesBody.innerHTML = "";
+        
+        // Сортируем: сначала активные
+        const sortedDevices = Object.values(deviceStats).sort((a, b) => b.count - a.count);
+        
+        sortedDevices.forEach(dev => {
+            const row = document.createElement('tr');
+            const isItMe = (myCurrentDeviceId && dev.id === myCurrentDeviceId);
+            if (isItMe) row.className = "highlight-row";
+
+            // Внешний вид ID / Имени
+            const shortId = dev.id.length > 15 ? dev.id.substring(0, 8) + '...' + dev.id.slice(-6) : dev.id;
+            
+            let displayIdentity = dev.name 
+                ? `<span style="color: var(--accent); font-weight: bold; font-size: 15px;">${dev.name}</span><br><span style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${shortId}</span>` 
+                : `<span style="font-family: monospace; color: #cbd6d0;">${shortId}</span>`;
+
+            const badge = isItMe ? `<br><span class="my-device-badge">Это вы</span>` : '';
+
+            row.innerHTML = `
+                <td title="ID: ${dev.id}">${displayIdentity}${badge}</td>
+                <td style="color: var(--text-muted);">Последняя:<br><strong style="color: var(--accent);">${dev.lastSurah}</strong></td>
+                <td><span class="count-badge">${dev.count}</span></td>
+                <td>
+                    <button class="action-btn" onclick="renameDevice('${dev.id}', '${dev.name || ''}')" title="Переименовать">✏️</button>
+                    <button class="action-btn delete" onclick="removeDevice('${dev.id}')" title="Удалить из списка">❌</button>
+                </td>
+            `;
+            devicesBody.appendChild(row);
+        });
+        document.getElementById('devicesLoader').style.display = "none";
+        document.getElementById('devicesTable').style.display = "table";
+
+        // --- РЕНДЕРИМ ТОП СУР ---
+        const sortedSurahs = Object.values(surahStats).sort((a, b) => b.count - a.count).slice(0, 5);
+        const tbody = document.getElementById('topSurahsBody');
+        tbody.innerHTML = "";
+        
+        sortedSurahs.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="font-weight: bold; color: var(--accent);">${item.name}</td>
+                <td>${item.reciter}</td>
+                <td>${item.part > 0 ? 'Часть ' + item.part : 'Вся'}</td>
+                <td><span class="count-badge">${item.count}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+        document.getElementById('topSurahsLoader').style.display = "none";
+        document.getElementById('topSurahsTable').style.display = "table";
+
+        // --- РЕНДЕРИМ ЛЕНТУ АКТИВНОСТИ ---
+        const recentActivities = activityArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5);
+        const logContainer = document.getElementById('activityLog');
+        logContainer.innerHTML = "";
+
+        recentActivities.forEach(act => {
+            const item = document.createElement('div');
+            item.className = "activity-item";
+            
+            const date = new Date(act.timestamp);
+            const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const isItMe = (myCurrentDeviceId && act.deviceId === myCurrentDeviceId);
+            
+            // Если у устройства есть имя, используем его в логах
+            const deviceNameInSettings = settings[act.deviceId]?.name;
+            let userLabel = isItMe ? '<strong style="color:var(--accent);">Вы</strong> запустили' : 'Кто-то запустил';
+            if (!isItMe && deviceNameInSettings) {
+                userLabel = `<strong style="color:var(--text-muted);">${deviceNameInSettings}</strong> запустил(а)`;
+            }
+
+            item.innerHTML = `
+                <div>
+                    ${userLabel} суру <strong>${act.surahName}</strong> 
+                    <span style="color: var(--text-muted); font-size:11px;">(Чтец: ${act.reciter || 'Общий'})</span>
+                </div>
+                <div class="activity-time">${timeStr}</div>
+            `;
+            logContainer.appendChild(item);
+        });
+        document.getElementById('activityLoader').style.display = "none";
+
+    }, (error) => {
+        console.error("Ошибка Firebase:", error);
+    });
+
+    // ==========================================
+    // ФУНКЦИИ УПРАВЛЕНИЯ УСТРОЙСТВАМИ
+    // ==========================================
+
+    function addDevice() {
+        const idInput = document.getElementById('newDeviceId');
+        const nameInput = document.getElementById('newDeviceName');
+        const id = idInput.value.trim();
+        const name = nameInput.value.trim();
+        
+        if (!id) {
+            alert("Пожалуйста, введите ID устройства!");
+            return;
+        }
+        
+        database.ref('app_analytics/device_settings/' + id).update({
+            name: name || "Новое устройство",
+            isHidden: false
+        }).then(() => {
+            idInput.value = "";
+            nameInput.value = "";
+        }).catch(err => alert("Ошибка при добавлении: " + err.message));
+    }
+
+    function renameDevice(deviceId, currentName) {
+        const newName = prompt("Введите новое имя для устройства:", currentName || "");
+        if (newName !== null) { // Если не нажали "Отмена"
+            database.ref('app_analytics/device_settings/' + deviceId).update({
+                name: newName.trim(),
+                isHidden: false
+            });
+        }
+    }
+
+    function removeDevice(deviceId) {
+        if (confirm("Вы уверены, что хотите удалить/скрыть это устройство из списка? (Его статистика прослушиваний останется в общем счетчике)")) {
+            database.ref('app_analytics/device_settings/' + deviceId).update({
+                isHidden: true
+            });
+        }
+    }
+</script>
+</body>
+</html>

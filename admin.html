@@ -377,9 +377,26 @@
             }
         }
         // Формат только цифры: 83
+                // Формат только цифры: 83, 091, 0911, 0021
         else if (/^\d+$/.test(clean)) {
-            surahNum = parseInt(clean, 10);
+            if (clean.length >= 4) {
+                // Если 4 цифры и больше (например, 0911 или 0021)
+                // Первые 3 цифры — это сура, остальные — номер части
+                surahNum = parseInt(clean.substring(0, 3), 10);
+                part = parseInt(clean.substring(3), 10) || 1;
+            } else {
+                let numVal = parseInt(clean, 10);
+                if (numVal > 114) {
+                    // Если 3 цифры, но число больше 114 (например, 911 -> сура 91, часть 1)
+                    part = parseInt(clean.slice(-1), 10);
+                    surahNum = parseInt(clean.slice(0, -1), 10);
+                } else {
+                    // Обычный номер суры (83, 091)
+                    surahNum = numVal;
+                }
+            }
         }
+
 
         if (!surahNum || isNaN(surahNum)) return null;
 
