@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIFZ — Навигационная Панель</title>
+    <style>
+        :root { 
+            --primary: #12513f; /* Глубокий исламский зеленый */
+            --accent: #c5a880; /* Матовое золото */
+            --bg: #0b110e; /* Глубокий темный фон */
+            --card: #141f1a; /* Фон карточек */
+            --text-muted: #8fa099;
+            --text-light: #f0f4f2;
+            --danger: #e57373;
+            --danger-bg: #2d1919;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text-light); 
+            margin: 0; 
+            padding: 40px 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        .container { 
+            width: 100%; 
+            max-width: 900px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+        }
+
+        /* Шапка сайта */
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        header::after {
+            content: "✦ ✦ ✦";
+            display: block;
+            color: var(--accent);
+            letter-spacing: 6px;
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0.7;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 28px;
+            letter-spacing: 1.5px;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Разделы и Сетка */
+        .section-title {
+            color: var(--accent);
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #283e34;
+            padding-bottom: 6px;
+            margin-top: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 20px;
+        }
+
+        /* Карточки */
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(197, 168, 128, 0.12);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: transparent;
+            transition: background 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(197, 168, 128, 0.35);
+            box-shadow: 0 10px 25px rgba(18, 81, 63, 0.2);
+        }
+
+        .card:hover::before {
+            background: var(--accent);
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card-icon {
+            font-size: 24px;
+            background: rgba(197, 168, 128, 0.08);
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid rgba(197, 168, 128, 0.15);
+            color: var(--accent);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .card-desc {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            line-height: 1.5;
+            margin: 0 0 20px 0;
+            flex-grow: 1;
+        }
+
+        .card-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 13px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+
+        .card:hover .card-action {
+            background: #186a52;
+            color: #fff;
+        }
+
+        /* Специальный опасный блок для очистки */
+        .danger-zone {
+            margin-top: 20px;
+            background: var(--danger-bg);
+            border: 1px solid rgba(229, 115, 115, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .danger-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .danger-icon {
+            font-size: 32px;
+            color: var(--danger);
+        }
+
+        .danger-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            margin: 0 0 4px 0;
+        }
+
+        .danger-desc {
+            font-size: 13px;
+            color: #c9afaf;
+            margin: 0;
+        }
+
+        .btn-danger {
+            background: #b71c1c;
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 20px;
+            font-weight: bold;
+            font-size: 13px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-danger:hover {
+            background: #e53935;
+        }
+
+        @media (max-width: 600px) {
+            .danger-zone {
+                flex-direction: column;
+                text-align: center;
+            }
+            .danger-info {
+                flex-direction: column;
+            }
+            .btn-danger {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Экосистема HIFZ</h1>
+        <div class="subtitle">Единая навигационная панель приложений и инструментов управления</div>
+    </header>
+
+    <div class="section-title">Приложения для пользователей</div>
+    <div class="grid">
+        <a href="https://hacker3846.github.io/Metrsayt/proClient" class="card">
+            <div>
+                <div class="card-meta">
+                    <div class="card-icon">👑</div>
+                    <h2 class="card-title">HIFZ Player Pro</h2>
+                </div>
+                <p class="card-desc">Плеер арабских сур с режимом «караоке» (тилявы). Включает умную систему ожидания: плеер автоматически приостанавливается, пока слушатель читает Коран.</p>
+            </div>
+            <div class="card-action">Открыть плеер →</div>
+        </a>
+
+        <a href="https://hacker3846.github.io/Metrsayt/client" class="card">
+            <div>
+                <div class="card-meta">
+                    <div class="card-icon">🎵</div>
+                    <h2 class="card-title">HIFZ Player Standard</h2>
+                </div>
+                <p class="card-desc">Классическая версия аудиоцентра для прослушивания сур. Облегченный плеер без модуля контроля пауз и системы ожидания слушателя.</p>
+            </div>
+            <div class="card-action">Открыть плеер →</div>
+        </a>
+    </div>
+
+    <div class="section-title">Панели управления и данные</div>
+    <div class="grid">
+        <a href="https://hacker3846.github.io/Metrsayt/admin" class="card">
+            <div>
+                <div class="card-meta">
+                    <div class="card-icon">✍️</div>
+                    <h2 class="card-title">Панель Администратора</h2>
+                </div>
+                <p class="card-desc">Интерфейс редактора для наполнения базы данных. Позволяет добавлять новые суры, переводы, хадисы и привязывать страницы Священного Корана.</p>
+            </div>
+            <div class="card-action">Управление →</div>
+        </a>
+
+        <a href="https://hacker3846.github.io/Metrsayt/transcription" class="card">
+            <div>
+                <div class="card-meta">
+                    <div class="card-icon">📝</div>
+                    <h2 class="card-title">Синхронизация тилявы</h2>
+                </div>
+                <p class="card-desc">Инструмент создания транскрипций. Позволяет добавлять и размечать текстовое сопровождение, формируя тот самый режим «караоке».</p>
+            </div>
+            <div class="card-action">Редактировать →</div>
+        </a>
+
+        <a href="https://hacker3846.github.io/Metrsayt/analytic" class="card">
+            <div>
+                <div class="card-meta">
+                    <div class="card-icon">📊</div>
+                    <h2 class="card-title">Аналитика V2</h2>
+                </div>
+                <p class="card-desc">Мониторинг активности в реальном времени. Статистика уникальных устройств, популярные суры и логи последних действий пользователей.</p>
+            </div>
+            <div class="card-action">Смотреть отчет →</div>
+        </a>
+    </div>
+
+    <div class="section-title" style="color: var(--danger); border-color: #422020;">Опасная зона</div>
+    <div class="danger-zone">
+        <div class="danger-info">
+            <div class="danger-icon">⚠️</div>
+            <div>
+                <h3 class="danger-title">Очистка базы данных (Clear)</h3>
+                <p class="danger-desc">Внимание! Данное действие полностью удалит все таблицы и записи из Firebase. Нажимайте кнопку только в том случае, если вы абсолютно уверены в своих действиях.</p>
+            </div>
+        </div>
+        <a href="https://hacker3846.github.io/Metrsayt/Clear" class="btn-danger" onclick="return confirm('Вы СТРОГО уверены, что хотите перейти? Это меню полного удаления БД!');">Сбросить базу данных</a>
+    </div>
+</div>
+
+</body>
+</html>
