@@ -317,6 +317,9 @@
                 displayUiName += ` — часть ${part}`;
             }
 
+            // ИСПРАВЛЕНИЕ 1: Страховка для URL аудиофайла, как в клиенте
+            let finalAudioUrl = val.audioUrl || val.audio;
+
             allSurahs.push({ 
                 id: trackId, 
                 name: displayUiName, 
@@ -324,7 +327,7 @@
                 surahName: sName,
                 reader: reader,
                 part: part,
-                audio: val.audio 
+                audio: finalAudioUrl // ИСПРАВЛЕНИЕ 1
             });
         });
         
@@ -353,6 +356,8 @@
         const track = allSurahs.find(s => s.id === id);
         if(track) {
             adminPlayer.src = track.audio;
+            adminPlayer.load(); // ИСПРАВЛЕНИЕ 2: Принудительная перезагрузка плеера
+            
             statusOutput.textContent = "Аудиозапись загружена. Вставьте текст транскрипции.";
             database.ref('surahs/' + id + '/markup').get().then(snap => {
                 if (snap.exists() && snap.val().text) {
@@ -550,7 +555,6 @@
         statusOutput.textContent = "📥 Локальный файл успешно скачан!";
     }
 
-    // --- ОБНОВЛЁННАЯ ЛОГИКА ЗАГРУЗКИ ФАЙЛОВ ---
     const dropZone = document.getElementById('dropZone');
 
     dropZone.addEventListener('dragover', (e) => {
@@ -572,7 +576,6 @@
         if (!files || files.length === 0) return;
 
         if (files.length === 1) {
-            // Логика для 1 файла (Ручной режим)
             const currentSurahId = document.getElementById('surahSelect').value;
             if (!currentSurahId) {
                 alert("Пожалуйста, сначала выберите аудиозапись в выпадающем списке, чтобы загрузить в неё разметку.");
@@ -600,15 +603,13 @@
             reader.readAsText(file);
 
         } else {
-            // Логика для >1 файла (Массовая авто-загрузка)
             processBulkFiles(files);
         }
         
-        // Сбрасываем input, чтобы можно было загрузить те же файлы повторно
         document.getElementById('fileInput').value = '';
     }
 
-        async function processBulkFiles(files) {
+    async function processBulkFiles(files) {
         statusOutput.textContent = `Начинается массовая загрузка (${files.length} файлов)...`;
         let successCount = 0;
         let failCount = 0;
@@ -616,33 +617,28 @@
         const promises = Array.from(files).map(file => {
             return new Promise((resolve) => {
                 let surahNum = null;
-                let partNum = 1; // По умолчанию часть 1
+                let partNum = 1; 
                 let readerName = "";
 
-                // Убираем расширение .json для проверки
                 const cleanName = file.name.replace(/\.json$/i, '');
 
-                // 1. Формат экспорта из админки: (1)АльМутаффифин-83_Арби
                 const exportMatch = cleanName.match(/^\((\d+)\).*?-(\d+)_(.+)$/);
                 if (exportMatch) {
                     partNum = parseInt(exportMatch[1], 10);
                     surahNum = parseInt(exportMatch[2], 10);
                     readerName = exportMatch[3];
                 } 
-                // 2. Формат: 0831АрбиАшШишани (3 цифры сура, 1 цифра часть)
                 else if (/^\d{4}/.test(cleanName)) {
                     const match = cleanName.match(/^(\d{3})(\d)(.*)$/);
                     surahNum = parseInt(match[1], 10);
                     partNum = parseInt(match[2], 10);
                     readerName = match[3];
                 } 
-                // 3. Формат: 083_АрбиАшШишани или 83_АрбиАшШишани
                 else if (/^\d{1,3}_/.test(cleanName)) {
                     const match = cleanName.match(/^(\d{1,3})_(.*)$/);
                     surahNum = parseInt(match[1], 10);
                     readerName = match[2];
                 } 
-                // 4. Формат: только цифры (83)
                 else if (/^\d{1,3}$/.test(cleanName)) {
                     surahNum = parseInt(cleanName, 10);
                     readerName = "Общий";
@@ -654,24 +650,18 @@
                     return;
                 }
 
-                // Нормализация имени для точного поиска (убираем пробелы, тире и приводим к нижнему регистру)
                 const normalize = str => (str || "").toLowerCase().replace(/[\s\-_]/g, "");
                 const searchReader = normalize(readerName);
 
-                // Поиск суры в базе
                 const matchedSurah = allSurahs.find(s => {
                     const isSurahMatch = s.surahNum === surahNum;
-                    
-                    // Если в базе часть не указана (0), а загружается 1 часть — считаем это совпадением
                     const isPartMatch = (s.part === partNum) || ((!s.part || s.part === 0) && partNum === 1);
-                    
                     const dbReader = normalize(s.reader);
                     
                     let isReaderMatch = false;
                     if (searchReader === "общий" || searchReader === "") {
                         isReaderMatch = (dbReader === "общий" || dbReader === "");
                     } else {
-                        // Проверяем взаимное вхождение, чтобы "АрбиАшШишани" совпало с "Арби Аш-Шишани"
                         isReaderMatch = dbReader.includes(searchReader) || searchReader.includes(dbReader);
                     }
 
@@ -685,7 +675,6 @@
                     return;
                 }
 
-                // Читаем файл и отправляем напрямую в Firebase
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
@@ -725,7 +714,6 @@
         alert(resultMessage);
         statusOutput.textContent = resultMessage.replace(/\n/g, ' | ');
     }
-
 
     window.addEventListener('keydown', (e) => {
         if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') {
