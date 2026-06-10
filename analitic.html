@@ -232,6 +232,75 @@
 </head>
 <body>
 
+<a href="https://hacker3846.github.io/Metrsayt/" class="hifz-global-back-btn" title="Вернуться в навигацию HIFZ">
+    <span class="hifz-btn-icon">✦</span>
+    <span class="hifz-btn-text">HIFZ Навигация</span>
+</a>
+
+<style>
+    .hifz-global-back-btn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #141f1a; /* Цвет карточки */
+        border: 1px solid rgba(197, 168, 128, 0.3); /* Матовое золото */
+        border-radius: 10px;
+        padding: 10px 16px;
+        color: #c5a880; /* Текст золотого цвета */
+        text-decoration: none;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+    }
+
+    .hifz-global-back-btn:hover {
+        transform: translateY(-2px);
+        background: #12513f; /* Глубокий зеленый при наведении */
+        color: #ffffff;
+        border-color: #c5a880;
+        box-shadow: 0 8px 25px rgba(18, 81, 63, 0.4);
+    }
+
+    .hifz-btn-icon {
+        font-size: 14px;
+        color: #c5a880;
+        transition: color 0.3s;
+    }
+
+    .hifz-global-back-btn:hover .hifz-btn-icon {
+        color: #ffffff;
+    }
+
+    /* Адаптив под мобилки: сжимаем до минималистичной кнопки-иконки */
+    @media (max-width: 480px) {
+        .hifz-global-back-btn {
+            top: 12px;
+            left: 12px;
+            padding: 12px;
+            border-radius: 50%; /* Превращается в круглую кнопку */
+            width: 40px;
+            height: 40px;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        .hifz-btn-text {
+            display: none; /* Прячем текст, чтобы не мешал */
+        }
+        .hifz-btn-icon {
+            font-size: 16px;
+        }
+    }
+</style>
+
 <div class="container">
     <h1>📊 HIFZ — Расширенная Аналитика</h1>
     <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: -15px; margin-bottom: 10px;">
