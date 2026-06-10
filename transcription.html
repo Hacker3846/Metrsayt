@@ -187,6 +187,33 @@
             background: rgba(197, 168, 128, 0.1);
             color: var(--accent);
         }
+
+        /* Стиль для блока настройки задержки */
+        .lag-control-row {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1a2922;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #283e34;
+        }
+        .lag-control-row input {
+            width: 80px;
+            background: #0b110e;
+            color: #fff;
+            border: 1px solid #283e34;
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        .lag-control-row input:focus {
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -202,6 +229,11 @@
 
         <audio id="adminPlayer" controls></audio>
         
+        <div class="lag-control-row">
+            <label for="lagInput" style="font-size: 13px; color: var(--text-muted); cursor: pointer;">Вычитаемая задержка клика (сек):</label>
+            <input type="number" id="lagInput" step="0.05" value="0.1" title="Положительное число сдвигает метку назад, отрицательное — вперед">
+        </div>
+
         <div class="hotkeys-info">
             <b>Горячие клавиши управления (когда фокус не в текстовом поле):</b><br>
             [Пробел] — Старт / Пауза плеера | [Enter] или [Стрелка вправо] — Зафиксировать таймкод элемента | [Ctrl + Z] — Шаг назад
@@ -266,8 +298,6 @@
     let timingsArray = [];  
     let currentIndex = 0;   
 
-    const audioLagCompensation = 0.1;
-
     const adminPlayer = document.getElementById('adminPlayer');
     const statusOutput = document.getElementById('statusOutput');
 
@@ -317,7 +347,6 @@
                 displayUiName += ` — часть ${part}`;
             }
 
-            // ИСПРАВЛЕНИЕ 1: Страховка для URL аудиофайла, как в клиенте
             let finalAudioUrl = val.audioUrl || val.audio;
 
             allSurahs.push({ 
@@ -327,7 +356,7 @@
                 surahName: sName,
                 reader: reader,
                 part: part,
-                audio: finalAudioUrl // ИСПРАВЛЕНИЕ 1
+                audio: finalAudioUrl
             });
         });
         
@@ -356,7 +385,7 @@
         const track = allSurahs.find(s => s.id === id);
         if(track) {
             adminPlayer.src = track.audio;
-            adminPlayer.load(); // ИСПРАВЛЕНИЕ 2: Принудительная перезагрузка плеера
+            adminPlayer.load();
             
             statusOutput.textContent = "Аудиозапись загружена. Вставьте текст транскрипции.";
             database.ref('surahs/' + id + '/markup').get().then(snap => {
@@ -462,6 +491,10 @@
 
     function recordNextTiming() {
         if (currentIndex >= tokensArray.length) return;
+
+        // ИЗМЕНЕНИЕ: Читаем компенсацию задержки прямо из инпута в момент клика
+        const lagInput = document.getElementById('lagInput');
+        const audioLagCompensation = parseFloat(lagInput.value) || 0;
 
         let calculatedTime = adminPlayer.currentTime - audioLagCompensation;
         if (calculatedTime < 0) calculatedTime = 0;

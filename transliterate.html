@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Транслитератор Корана (Таджвид)</title>
+    <style>
+        :root { 
+            --primary: #12513f; 
+            --primary-light: #1b6b54; 
+            --accent: #c5a880; 
+            --bg: #0b110e; 
+            --card: #141f1a; 
+            --text-muted: #8fa099;
+            --text-main: #e6eee9;
+            --danger: #9e3636;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid var(--primary);
+        }
+        h1 { 
+            margin-top: 0; 
+            font-size: 1.8rem; 
+            text-align: center; 
+            color: var(--accent);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 0.5px;
+        }
+        h2 {
+            font-size: 1.3rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            background-color: rgba(11, 17, 14, 0.8);
+            color: var(--text-main);
+            border: 1px solid var(--primary-light);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            resize: vertical;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(197, 168, 128, 0.15);
+        }
+        textarea::placeholder { color: var(--text-muted); }
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: var(--bg); border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        .arabic-input {
+            font-family: "Amiri", "Scheherazade New", serif;
+            font-size: 1.6rem;
+            direction: rtl;
+            line-height: 2;
+            color: #ffffff;
+        }
+
+        .main-actions {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        button, .btn-upload {
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(18, 81, 63, 0.5);
+            text-align: center;
+            display: inline-block;
+            box-sizing: border-box;
+        }
+        button:hover, .btn-upload:hover { 
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            color: #ffffff;
+            border-color: #ffffff;
+        }
+        .btn-secondary {
+            background: rgba(18, 81, 63, 0.2);
+            border: 1px solid var(--primary-light);
+            font-size: 0.95rem;
+            padding: 12px;
+        }
+        
+        .saved-section { margin-top: 40px; }
+        .saved-toolbar { display: flex; gap: 15px; margin-bottom: 20px; }
+        .saved-list { display: flex; flex-direction: column; gap: 12px; }
+        .saved-item {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--primary-light);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+        .saved-item:hover { border-color: var(--accent); }
+        .saved-item-info { flex-grow: 1; overflow: hidden; }
+        .saved-item-title { font-weight: bold; color: var(--accent); font-size: 1.1rem; margin-bottom: 5px; }
+        .saved-item-preview { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }
+        .saved-item-actions { display: flex; gap: 10px; margin-left: 15px; flex-shrink: 0; }
+        
+        .btn-small { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; letter-spacing: 0.5px; }
+        .btn-delete { background: transparent; border-color: var(--danger); color: #e88686; box-shadow: none; }
+        .btn-delete:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+        @media(max-width: 768px) { 
+            .grid, .main-actions, .saved-toolbar { grid-template-columns: 1fr; flex-direction: column; }
+            .saved-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .saved-item-actions { margin-left: 0; width: 100%; justify-content: space-between; }
+            .saved-item-actions button { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Точная транслитерация (Таджвид)</h1>
+    <div class="grid">
+        <div>
+            <label>Арабский текст (с огласовками)</label>
+            <textarea id="arabicInput" class="arabic-input" placeholder="Вставьте суру здесь..."></textarea>
+        </div>
+        <div>
+            <label>Кириллица (ВЕРХНИЙ РЕГИСТР)</label>
+            <textarea id="cyrillicOutput" readonly placeholder="Здесь появится транслитерация..."></textarea>
+        </div>
+    </div>
+    
+    <div class="main-actions">
+        <button onclick="processText()">Транслитерировать</button>
+        <button onclick="saveCurrentText()" class="btn-secondary">Сохранить в список</button>
+    </div>
+
+    <div class="saved-section">
+        <h2>Сохраненные тексты</h2>
+        <div class="saved-toolbar">
+            <button onclick="exportJSON()" class="btn-secondary" style="flex: 1;">Выгрузить список (JSON)</button>
+            <label class="btn-upload btn-secondary" style="flex: 1;">
+                Загрузить список (JSON)
+                <input type="file" accept=".json" style="display: none;" onchange="importJSON(event)">
+            </label>
+        </div>
+        <div id="savedListContainer" class="saved-list">
+        </div>
+    </div>
+</div>
+
+<script>
+const charMap = {
+    'ء': { b: 'Ъ', t: 'soft' }, 'أ': { b: 'Ъ', t: 'soft' }, 'إ': { b: 'Ъ', t: 'soft' }, 
+    'ؤ': { b: 'Ъ', t: 'soft' }, 'ئ': { b: 'Ъ', t: 'soft' },
+    'آ': { b: 'Ъ', t: 'soft', madd: true, longMadd: true },
+    'ا': { b: '', t: 'soft' }, 'ٱ': { b: '', t: 'soft' },
+    'ب': { b: 'Б', t: 'soft' }, 'ت': { b: 'Т', t: 'soft' }, 
+    'ث': { b: 'С', s: 'Ъ', t: 'soft' }, 'ج': { b: 'ДЖ', t: 'soft' }, 
+    'ح': { b: 'Х', s: 'Ь', t: 'soft' }, 'خ': { b: 'Х', t: 'hard' },
+    'د': { b: 'Д', t: 'soft' }, 'ذ': { b: 'З', s: 'Ъ', t: 'soft' }, 
+    'ر': { b: 'Р', t: 'r' },     'ز': { b: 'З', t: 'soft' }, 
+    'س': { b: 'С', t: 'soft' }, 'ش': { b: 'Ш', t: 'soft' },
+    'ص': { b: 'С', t: 'hard' }, 'ض': { b: 'Д', s: 'Ъ', t: 'hard' }, 
+    'ط': { b: 'Т', s: '', t: 'hard' }, 'ظ': { b: 'З', s: 'Ъ', t: 'hard' }, 
+    'ع': { b: '1', t: 'soft' }, 'غ': { b: 'Г', s: '1', t: 'hard' },
+    'ف': { b: 'Ф', t: 'soft' }, 'ق': { b: 'К', s: 'Ъ', t: 'hard' }, 
+    'ك': { b: 'К', t: 'soft' }, 'ل': { b: 'Л', t: 'soft' }, 
+    'م': { b: 'М', t: 'soft' }, 'ن': { b: 'Н', t: 'soft' },
+    'ه': { b: 'Х', s: '1', t: 'soft' },'ة': { b: 'Т', t: 'soft' }, 
+    'و': { b: 'В', t: 'w' },     'ي': { b: 'Й', t: 'soft' },
+    'ى': { b: '', t: 'soft' },   'ی': { b: 'Й', t: 'soft' }, 
+    'ؽ': { b: 'Й', t: 'soft', madd: true, longMadd: true }, 
+    'ۏ': { b: 'В', t: 'w', madd: true, longMadd: true }     
+};
+
+const sunLetters = ['ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن'];
+const ikhfaLetters = ['ت','ث','ج','د','ذ','ز','س','ش','ص','ض','ط','ظ','ف','ق','ك'];
+const idghamLetters = ['ي','ر','م','ل','و','ن', 'ی']; 
+const hamzaLetters = ['ء', 'أ', 'إ', 'ؤ', 'ئ', 'آ'];
+
+function getVowel(type, haraka, tanween, isMadd, longMadd) {
+    let v = '';
+    if (haraka === 'f') {
+        if (type === 'hard' || type === 'r') v = 'О'; else v = 'А';
+    } else if (haraka === 'k') {
+        if (type === 'hard' || type === 'w') v = 'Ы'; else v = 'И';
+    } else if (haraka === 'd') {
+        v = 'У';
+    } else if (tanween) {
+        let baseVowel = '';
+        if (tanween === 'f') baseVowel = (type === 'hard' || type === 'r') ? 'О' : 'А';
+        if (tanween === 'k') baseVowel = (type === 'hard' || type === 'w') ? 'Ы' : 'И';
+        if (tanween === 'd') baseVowel = 'У';
+        return baseVowel + 'Н';
+    }
+    if (!v) return '';
+    if (isMadd) return longMadd ? v + v + v : v + v;
+    return v;
+}
+
+function attachToPrev(tokens, currentIndex, consonantStr) {
+    let p = currentIndex - 1;
+    while (p >= 0 && (tokens[p].isSpace || tokens[p].silent || tokens[p].char === 'ا' || tokens[p].char === 'ى' || tokens[p].char === '۟' || tokens[p].char === '۠')) p--;
+    if (p >= 0) {
+        tokens[p].madd = false;      
+        tokens[p].longMadd = false;
+        tokens[p].attachNextConsonant = consonantStr;
+    }
+}
+
+function processText() {
+    let rawText = document.getElementById('arabicInput').value;
+    
+    // Предварительная склейка Бисмиллях и очистка от мусора
+    let cleanText = rawText.replace(/[٠-٩۝\.,:;]/g, '');
+    cleanText = cleanText.replace(/بِسْمِ ٱللَّٰهِ/g, 'بِسْمِٱللَّٰهِ');
+    cleanText = cleanText.replace(/بِسْمِ اللَّهِ/g, 'بِسْمِاللَّهِ');
+    
+    let lines = cleanText.split('\n');
+    let outputLines = [];
+
+    for (let line of lines) {
+        if (line.trim().length === 0) { continue; }
+        
+        let tokens = [];
+        let current = null;
+
+        for (let char of line) {
+            if (char === ' ' || char === '\t') {
+                if (current) { tokens.push(current); current = null; }
+                tokens.push({ isSpace: true });
+                continue;
+            }
+
+            if (charMap[char]) {
+                if (current) tokens.push(current);
+                current = {
+                    char: char, base: charMap[char].b, spec: charMap[char].s || '', type: charMap[char].t,
+                    haraka: (char === 'آ') ? 'f' : null, shadda: false, sukun: false, tanween: null, 
+                    madd: charMap[char].madd || false, longMadd: charMap[char].longMadd || false, 
+                    hasTilde: false, hasSpecialMadd: false, silent: false, isDaggerSeat: false
+                };
+            } else if (current) {
+                if (char === 'َ') current.haraka = 'f';
+                if (char === 'ِ') current.haraka = 'k';
+                if (char === 'ُ') current.haraka = 'd';
+                
+                if (char === 'ً' || char === 'ࣰ') current.tanween = 'f'; 
+                if (char === 'ٍ' || char === 'ࣲ') current.tanween = 'k';
+                if (char === 'ٌ' || char === 'ࣱ') current.tanween = 'd';
+                
+                if (char === 'ْ' || char === 'ۡ') current.sukun = true;
+                if (char === 'ّ') current.shadda = true;
+                
+                if (char === 'ٓ' || char === 'ۤ') { current.longMadd = true; current.hasTilde = true; }
+                
+                if (char === 'ٰ') { 
+                    current.haraka = 'f'; current.madd = true; 
+                    if (['ى', 'ي', 'ی', 'و', 'ا'].includes(current.char)) { current.base = ''; current.isDaggerSeat = true; }
+                } 
+                
+                if (char === 'ٗ') { current.haraka = 'd'; current.madd = true; } 
+                if (char === 'ٖ') { current.haraka = 'k'; current.madd = true; } 
+                if (char === 'ۥ') { current.haraka = 'd'; current.madd = true; } 
+                if (char === 'ۦ') { current.haraka = 'k'; current.madd = true; } 
+
+                if (char === '۟' || char === '۠') current.silent = true; 
+            }
+        }
+        if (current) tokens.push(current);
+
+        for (let i = 0; i < tokens.length; i++) {
+            let tok = tokens[i];
+            if (tok.char === 'ا' && tok.tanween) {
+                let p = i - 1;
+                while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
+                if (p >= 0) {
+                    tokens[p].tanween = tok.tanween;
+                    tok.tanween = null;
+                    tok.silent = true;
+                }
+            }
+        }
+
+        for (let i = 0; i < tokens.length; i++) {
+            let tok = tokens[i];
+            if (tok.isSpace || tok.silent) continue;
+            let p = i - 1;
+            while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
+            let prev = (p >= 0) ? tokens[p] : null;
+
+            let maddType = null;
+            let isMadd = !tok.haraka && !tok.sukun && !tok.shadda && !tok.tanween;
+
+            if (tok.char === 'آ' || tok.isDaggerSeat) maddType = 'a';
+            else if (isMadd) {
+                if (tok.char === 'ا' || tok.char === 'ى') maddType = 'a';
+                else if (tok.char === 'ي' || tok.char === 'ی' || tok.char === 'ؽ') maddType = 'i';
+                else if (tok.char === 'و' || tok.char === 'ۏ') maddType = 'u';
+            }
+
+            if (maddType && prev && !tok.sukun && !tok.shadda && !tok.tanween) {
+                if (!prev.haraka && !prev.sukun && !prev.shadda && !prev.tanween) {
+                    if (maddType === 'a') prev.haraka = 'f';
+                    if (maddType === 'i') prev.haraka = 'k';
+                    if (maddType === 'u') prev.haraka = 'd';
+                }
+
+                if ((maddType === 'a' && prev.haraka === 'f') || (maddType === 'i' && prev.haraka === 'k') || (maddType === 'u' && prev.haraka === 'd')) {
+                    prev.madd = true;
+                    if (tok.longMadd) prev.longMadd = true;
+                    if (tok.hasTilde) prev.hasTilde = true; 
+                    if (tok.char === 'ؽ' || tok.char === 'ۏ') prev.hasSpecialMadd = true; 
+                    tok.silent = true;
+                }
+            }
+        }
+
+        for (let i = 0; i < tokens.length; i++) {
+            let tok = tokens[i];
+            if (tok.isSpace || tok.silent) continue;
+            if (tok.madd || tok.longMadd) {
+                let nextPronounced = null;
+                for (let n = i + 1; n < tokens.length; n++) {
+                    if (!tokens[n].isSpace && !tokens[n].silent) { nextPronounced = tokens[n].char; break; }
+                }
+                let isExplicitLong = tok.hasTilde || tok.hasSpecialMadd;
+                if (isExplicitLong || (tok.longMadd && nextPronounced && hamzaLetters.includes(nextPronounced))) tok.longMadd = true;
+                else tok.longMadd = false;
+                tok.madd = true; 
+            }
+        }
+
+        for (let i = 0; i < tokens.length; i++) {
+            if ((tokens[i].char === 'ا' || tokens[i].char === 'ٱ') && i > 0 && tokens[i-1].char === 'و') {
+                if (i === tokens.length - 1 || tokens[i+1].isSpace || tokens[i].sukun || tokens[i].silent) tokens[i].silent = true;
+            }
+        }
+
+        for (let i = 0; i < tokens.length; i++) {
+            let tok = tokens[i];
+            if (tok.isSpace || tok.silent) continue;
+
+            if (tok.char === 'ا' || tok.char === 'ٱ') {
+                let nextIdx = i + 1;
+                if (nextIdx < tokens.length && tokens[nextIdx].char === 'ل') {
+                    let lamTok = tokens[nextIdx];
+                    let afterLamIdx = nextIdx + 1;
+                    let afterLamTok = afterLamIdx < tokens.length ? tokens[afterLamIdx] : null;
+
+                    let precededBySpeech = false;
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
+
+                    if (precededBySpeech) tok.silent = true; else tok.forcedA = true;
+
+                    if (afterLamTok && !afterLamTok.isSpace) {
+                        let isSun = sunLetters.includes(afterLamTok.char);
+                        if (isSun && !lamTok.shadda) {
+                            lamTok.silent = true; afterLamTok.shadda = true;
+                            if (precededBySpeech) { attachToPrev(tokens, i, afterLamTok.base + (afterLamTok.spec || '')); afterLamTok.hideFirstOfShadda = true; }
+                        } else {
+                            if (precededBySpeech) {
+                                let lamS = (lamTok.sukun || lamTok.shadda) ? 'Ь' : '';
+                                attachToPrev(tokens, i, lamTok.base + lamS);
+                                if (!lamTok.shadda) lamTok.silent = true; else lamTok.hideFirstOfShadda = true;
+                            }
+                        }
+                    }
+                } else {
+                    let precededBySpeech = false;
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
+                    if (precededBySpeech && tok.char === 'ٱ') tok.silent = true;
+                }
+            }
+        }
+
+        for (let i = 0; i < tokens.length; i++) {
+            let tok = tokens[i];
+            if (tok.isSpace || tok.silent) continue;
+
+            let hasSukunNun = (tok.char === 'ن' && !tok.haraka && !tok.tanween && !tok.shadda);
+            let hasTanween = tok.tanween !== null;
+
+            if (hasSukunNun || hasTanween) {
+                let nextTok = null;
+                for (let n = i + 1; n < tokens.length; n++) {
+                    if (!tokens[n].isSpace && !tokens[n].silent) { nextTok = tokens[n]; break; }
+                }
+
+                if (nextTok) {
+                    if (idghamLetters.includes(nextTok.char)) {
+                        nextTok.hideFirstOfShadda = true;
+                        let r = '';
+                        if (nextTok.char === 'و') r = '*У';
+                        else if (nextTok.char === 'ي' || nextTok.char === 'ی') r = '*Й';
+                        else if (nextTok.char === 'م') r = '*М';
+                        else if (nextTok.char === 'ن') r = '*Н';
+                        else if (nextTok.char === 'ل') r = 'Л';
+                        else if (nextTok.char === 'ر') r = 'Р';
+                        
+                        if (hasSukunNun) tok.overrideRender = r;
+                        if (hasTanween) tok.tanweenOverride = r;
+                    } else if (nextTok.char === 'ب') {
+                        if (hasSukunNun) tok.overrideRender = '*М';
+                        if (hasTanween) tok.tanweenOverride = '*М';
+                    } else if (ikhfaLetters.includes(nextTok.char)) {
+                        if (hasSukunNun) tok.overrideRender = '*НН';
+                        if (hasTanween) tok.tanweenOverride = '*НН';
+                    }
+                }
+            }
+        }
+
+        let lineStrRendered = "";
+        for (let t = 0; t < tokens.length; t++) {
+            let tok = tokens[t];
+            if (tok.isSpace) { lineStrRendered += " "; continue; }
+            if (tok.silent) { if (tok.attachNextConsonant) lineStrRendered += tok.attachNextConsonant; continue; }
+            if (tok.overrideRender) { lineStrRendered += tok.overrideRender; if (tok.attachNextConsonant) lineStrRendered += tok.attachNextConsonant; continue; }
+
+            let b = tok.base; let s = tok.spec || '';
+            if (tok.char === 'ل') s = (tok.sukun || tok.hideFirstOfShadda || tok.shadda || tok.attachNextConsonant) ? 'Ь' : ''; 
+
+            if ((hamzaLetters.includes(tok.char)) && !tok.forcedA) {
+                let isFirstPronounced = true;
+                for (let j = t - 1; j >= 0; j--) {
+                    if (tokens[j].isSpace) break;
+                    let checkTok = tokens[j];
+                    if (checkTok.char === 'ٱ' || checkTok.char === 'ا' || checkTok.char === 'ل') continue;
+                    if (!checkTok.silent) { isFirstPronounced = false; break; }
+                }
+                b = isFirstPronounced ? '' : 'Ъ';
+            }
+            if (tok.forcedA) { b = ''; s = ''; tok.haraka = 'f'; }
+
+            let cons = b + s;
+            if (tok.shadda && !tok.hideFirstOfShadda) cons = b + b + s;
+
+            let v = getVowel(tok.type, tok.haraka, tok.tanween, tok.madd, tok.longMadd);
+            if (tok.tanweenOverride !== undefined) {
+                let baseVowel = '';
+                if (tok.tanween === 'f') baseVowel = (tok.type === 'hard' || tok.type === 'r') ? 'О' : 'А';
+                if (tok.tanween === 'k') baseVowel = (tok.type === 'hard' || tok.type === 'w') ? 'Ы' : 'И';
+                if (tok.tanween === 'd') baseVowel = 'У';
+                v = baseVowel + tok.tanweenOverride;
+            }
+
+            let isLastRealToken = true;
+            for (let j = t + 1; j < tokens.length; j++) { if (!tokens[j].isSpace && !tokens[j].silent) { isLastRealToken = false; break; } }
+
+            if (isLastRealToken) {
+                if (tok.char === 'ة') { cons = 'Х1'; v = ''; }
+                else if (tok.tanween === 'f') { v = (tok.type === 'hard' || tok.type === 'r') ? 'ОО' : 'АА'; }
+                else if (tok.tanween) { v = `(${v})`; }
+                else if (tok.haraka && !tok.madd) { v = `(${v})`; }
+            }
+
+            lineStrRendered += cons + v;
+            if (tok.attachNextConsonant) lineStrRendered += tok.attachNextConsonant;
+        }
+
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛААХ1/g, "$1ЛЛЬАХ1");
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛАХ1/g, "$1ЛЛЬАХ1");
+        lineStrRendered = lineStrRendered.replace(/Л\s+ЛААХ1/g, "ЛЛАХ1");
+        lineStrRendered = lineStrRendered.replace(/Л\s+ЛАОХ1/g, "ЛЛОХ1");
+        lineStrRendered = lineStrRendered.replace(/РОХЬМААН/g, "РОХЬМАН");
+        
+        // НОВЫЙ ШТРИХ: принудительная склейка Бисмиллях
+        lineStrRendered = lineStrRendered.replace(/БИСМИ\s+ЛЛА/g, "БИСМИЛЛА");
+        
+        lineStrRendered = lineStrRendered.replace(/\s+/g, " ");
+
+        outputLines.push(lineStrRendered.trim());
+    }
+
+    document.getElementById('cyrillicOutput').value = outputLines.join('\n').toUpperCase().trim();
+}
+
+let savedData = JSON.parse(localStorage.getItem('tajweedSavedData')) || [];
+
+function saveCurrentText() {
+    const arabic = document.getElementById('arabicInput').value.trim();
+    const cyrillic = document.getElementById('cyrillicOutput').value.trim();
+
+    if (!arabic) {
+        alert("Сначала вставьте арабский текст!");
+        return;
+    }
+
+    let title = prompt("Введите название для сохранения (например: Аль-Фатиха 1-3 аят):");
+    if (title === null) return; 
+    if (title.trim() === "") title = "Сура от " + new Date().toLocaleDateString();
+
+    const newItem = {
+        id: Date.now(),
+        title: title,
+        arabic: arabic,
+        cyrillic: cyrillic
+    };
+
+    savedData.push(newItem);
+    localStorage.setItem('tajweedSavedData', JSON.stringify(savedData));
+    renderSavedList();
+}
+
+function loadText(id) {
+    const item = savedData.find(x => x.id === id);
+    if (item) {
+        document.getElementById('arabicInput').value = item.arabic;
+        document.getElementById('cyrillicOutput').value = item.cyrillic;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function deleteText(id) {
+    if (confirm("Вы уверены, что хотите удалить этот текст из списка?")) {
+        savedData = savedData.filter(x => x.id !== id);
+        localStorage.setItem('tajweedSavedData', JSON.stringify(savedData));
+        renderSavedList();
+    }
+}
+
+function renderSavedList() {
+    const container = document.getElementById('savedListContainer');
+    container.innerHTML = '';
+
+    if (savedData.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin-top: 10px;">Список пуст. Сохраните что-нибудь, и оно появится здесь.</p>';
+        return;
+    }
+
+    [...savedData].reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'saved-item';
+        
+        let preview = item.cyrillic ? item.cyrillic.substring(0, 60) + '...' : 'Нет транслитерации';
+
+        div.innerHTML = `
+            <div class="saved-item-info">
+                <div class="saved-item-title">${item.title}</div>
+                <div class="saved-item-preview">${preview}</div>
+            </div>
+            <div class="saved-item-actions">
+                <button class="btn-small" onclick="loadText(${item.id})">Загрузить</button>
+                <button class="btn-small btn-delete" onclick="deleteText(${item.id})">Удалить</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function exportJSON() {
+    if (savedData.length === 0) {
+        alert("Список пуст, нечего выгружать.");
+        return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedData, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = "tajweed_saved_list.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (Array.isArray(imported)) {
+                savedData = savedData.concat(imported);
+                localStorage.setItem('tajweedSavedData', JSON.stringify(savedData));
+                renderSavedList();
+                alert("Список успешно загружен и объединен с текущим!");
+            } else {
+                alert("Неверный формат файла.");
+            }
+        } catch (err) {
+            alert("Произошла ошибка при чтении файла JSON.");
+        }
+        event.target.value = ''; 
+    };
+    reader.readAsText(file);
+}
+
+window.onload = renderSavedList;
+</script>
+
+</body>
+</html>
