@@ -162,75 +162,6 @@
 </head>
 <body>
 
-<a href="https://hacker3846.github.io/Metrsayt/" class="hifz-global-back-btn" title="Вернуться в навигацию HIFZ">
-    <span class="hifz-btn-icon">✦</span>
-    <span class="hifz-btn-text">HIFZ Навигация</span>
-</a>
-
-<style>
-    .hifz-global-back-btn {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 99999;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        background: #141f1a; /* Цвет карточки */
-        border: 1px solid rgba(197, 168, 128, 0.3); /* Матовое золото */
-        border-radius: 10px;
-        padding: 10px 16px;
-        color: #c5a880; /* Текст золотого цвета */
-        text-decoration: none;
-        font-family: 'Segoe UI', Roboto, sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-        transition: all 0.3s ease;
-        backdrop-filter: blur(4px);
-    }
-
-    .hifz-global-back-btn:hover {
-        transform: translateY(-2px);
-        background: #12513f; /* Глубокий зеленый при наведении */
-        color: #ffffff;
-        border-color: #c5a880;
-        box-shadow: 0 8px 25px rgba(18, 81, 63, 0.4);
-    }
-
-    .hifz-btn-icon {
-        font-size: 14px;
-        color: #c5a880;
-        transition: color 0.3s;
-    }
-
-    .hifz-global-back-btn:hover .hifz-btn-icon {
-        color: #ffffff;
-    }
-
-    /* Адаптив под мобилки: сжимаем до минималистичной кнопки-иконки */
-    @media (max-width: 480px) {
-        .hifz-global-back-btn {
-            top: 12px;
-            left: 12px;
-            padding: 12px;
-            border-radius: 50%; /* Превращается в круглую кнопку */
-            width: 40px;
-            height: 40px;
-            justify-content: center;
-            box-sizing: border-box;
-        }
-        .hifz-btn-text {
-            display: none; /* Прячем текст, чтобы не мешал */
-        }
-        .hifz-btn-icon {
-            font-size: 16px;
-        }
-    }
-</style>
-
 <div class="container">
     <h1>Точная транслитерация (Таджвид)</h1>
     <div class="grid">
@@ -326,10 +257,12 @@ function attachToPrev(tokens, currentIndex, consonantStr) {
 function processText() {
     let rawText = document.getElementById('arabicInput').value;
     
-    // Предварительная склейка Бисмиллях и очистка от мусора
-    let cleanText = rawText.replace(/[٠-٩۝\.,:;]/g, '');
-    cleanText = cleanText.replace(/بِسْمِ ٱللَّٰهِ/g, 'بِسْمِٱللَّٰهِ');
-    cleanText = cleanText.replace(/بِسْمِ اللَّهِ/g, 'بِسْمِاللَّهِ');
+    // 1. Очистка от знаков остановок, айятов, саджд, хизбов и татвиля
+    let cleanText = rawText.replace(/ـ/g, ''); 
+    cleanText = cleanText.replace(/[٠-٩۝\.,:;ۖۗۘۙۚۛ۩۞ۜ]/g, '');
+    
+    // 2. Универсальная и мощная склейка "Бисмиллях" (любой сукун, любой алиф, ЛЮБЫЕ огласовки имени Аллаха)
+    cleanText = cleanText.replace(/بِس([ْۡ]?)مِ\s+([ٱا]لل[\u064B-\u065F\u0670]*هِ)/g, 'بِس$1مِ$2');
     
     let lines = cleanText.split('\n');
     let outputLines = [];
@@ -353,7 +286,8 @@ function processText() {
                     char: char, base: charMap[char].b, spec: charMap[char].s || '', type: charMap[char].t,
                     haraka: (char === 'آ') ? 'f' : null, shadda: false, sukun: false, tanween: null, 
                     madd: charMap[char].madd || false, longMadd: charMap[char].longMadd || false, 
-                    hasTilde: false, hasSpecialMadd: false, silent: false, isDaggerSeat: false
+                    hasTilde: false, hasSpecialMadd: false, silent: false, isDaggerSeat: false,
+                    isStartWasl: false, forcedHaraka: null
                 };
             } else if (current) {
                 if (char === 'َ') current.haraka = 'f';
@@ -386,7 +320,8 @@ function processText() {
 
         for (let i = 0; i < tokens.length; i++) {
             let tok = tokens[i];
-            if (tok.char === 'ا' && tok.tanween) {
+            // Сдвигаем танвин с алифа или я (макусура) на предыдущую букву
+            if ((tok.char === 'ا' || tok.char === 'ى') && tok.tanween) {
                 let p = i - 1;
                 while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
                 if (p >= 0) {
@@ -403,9 +338,14 @@ function processText() {
             let p = i - 1;
             while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
             let prev = (p >= 0) ? tokens[p] : null;
+            
+            // Если предыдущая буква с танвином, то пустая 'ى' или 'ا' становится немой (напр. هُدًى)
+            if (prev && prev.tanween && (tok.char === 'ا' || tok.char === 'ى') && !tok.haraka && !tok.sukun && !tok.tanween) {
+                tok.silent = true;
+            }
 
             let maddType = null;
-            let isMadd = !tok.haraka && !tok.sukun && !tok.shadda && !tok.tanween;
+            let isMadd = !tok.haraka && !tok.sukun && !tok.shadda && !tok.tanween && !tok.silent;
 
             if (tok.char === 'آ' || tok.isDaggerSeat) maddType = 'a';
             else if (isMadd) {
@@ -464,9 +404,14 @@ function processText() {
                     let afterLamTok = afterLamIdx < tokens.length ? tokens[afterLamIdx] : null;
 
                     let precededBySpeech = false;
-                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace && !tokens[p].silent) { precededBySpeech = true; break; } }
 
-                    if (precededBySpeech) tok.silent = true; else tok.forcedA = true;
+                    if (precededBySpeech) {
+                        tok.silent = true; 
+                    } else { 
+                        tok.isStartWasl = true; 
+                        tok.forcedHaraka = 'f'; 
+                    }
 
                     if (afterLamTok && !afterLamTok.isSpace) {
                         let isSun = sunLetters.includes(afterLamTok.char);
@@ -483,8 +428,30 @@ function processText() {
                     }
                 } else {
                     let precededBySpeech = false;
-                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
-                    if (precededBySpeech && tok.char === 'ٱ') tok.silent = true;
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace && !tokens[p].silent) { precededBySpeech = true; break; } }
+                    
+                    if (precededBySpeech && tok.char === 'ٱ') {
+                        tok.silent = true;
+                    } else if (!precededBySpeech && tok.char === 'ٱ') {
+                        // Динамическое вычисление огласовки для начального ٱ в глаголах
+                        let realConsonants = 0;
+                        let thirdHaraka = 'k'; 
+                        for(let k = i; k < tokens.length; k++) {
+                            if (!tokens[k].isSpace && !tokens[k].silent && tokens[k].char !== 'ٱ') {
+                                realConsonants++;
+                                if (realConsonants === 2 && tokens[k].shadda) {
+                                    if (tokens[k].haraka === 'd') thirdHaraka = 'd';
+                                    break;
+                                }
+                                if (realConsonants === 3) {
+                                    if (tokens[k].haraka === 'd') thirdHaraka = 'd';
+                                    break;
+                                }
+                            }
+                        }
+                        tok.isStartWasl = true;
+                        tok.forcedHaraka = thirdHaraka;
+                    }
                 }
             }
         }
@@ -536,7 +503,7 @@ function processText() {
             let b = tok.base; let s = tok.spec || '';
             if (tok.char === 'ل') s = (tok.sukun || tok.hideFirstOfShadda || tok.shadda || tok.attachNextConsonant) ? 'Ь' : ''; 
 
-            if ((hamzaLetters.includes(tok.char)) && !tok.forcedA) {
+            if ((hamzaLetters.includes(tok.char)) && !tok.isStartWasl) {
                 let isFirstPronounced = true;
                 for (let j = t - 1; j >= 0; j--) {
                     if (tokens[j].isSpace) break;
@@ -546,7 +513,7 @@ function processText() {
                 }
                 b = isFirstPronounced ? '' : 'Ъ';
             }
-            if (tok.forcedA) { b = ''; s = ''; tok.haraka = 'f'; }
+            if (tok.isStartWasl) { b = ''; s = ''; tok.haraka = tok.forcedHaraka; }
 
             let cons = b + s;
             if (tok.shadda && !tok.hideFirstOfShadda) cons = b + b + s;
@@ -574,14 +541,20 @@ function processText() {
             if (tok.attachNextConsonant) lineStrRendered += tok.attachNextConsonant;
         }
 
-        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛААХ1/g, "$1ЛЛЬАХ1");
-        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛАХ1/g, "$1ЛЛЬАХ1");
-        lineStrRendered = lineStrRendered.replace(/Л\s+ЛААХ1/g, "ЛЛАХ1");
+        // --- УЛУЧШЕННЫЕ ПРАВИЛА ИСКЛЮЧЕНИЙ ДЛЯ АЛЛАХА И БИСМИЛЛЯХ ---
+        // Мягкая Л (ЛЛЬА) после касры
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛАА?Х1/g, "$1ЛЛЬАХ1");
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])ЛЛА([АЕО]?)Х1/g, "$1ЛЛЬА$2Х1"); 
+        
+        // Твердая Л после фатхи/даммы
+        lineStrRendered = lineStrRendered.replace(/Л\s+ЛАА?Х1/g, "ЛЛАХ1");
         lineStrRendered = lineStrRendered.replace(/Л\s+ЛАОХ1/g, "ЛЛОХ1");
         lineStrRendered = lineStrRendered.replace(/РОХЬМААН/g, "РОХЬМАН");
         
-        // НОВЫЙ ШТРИХ: принудительная склейка Бисмиллях
-        lineStrRendered = lineStrRendered.replace(/БИСМИ\s+ЛЛА/g, "БИСМИЛЛА");
+        // Гарантированная склейка слова Аллах после Бисми (если вдруг скрипт их разделил)
+        lineStrRendered = lineStrRendered.replace(/БИСМИЛ\s+Л([АЯЬ])Х1/g, "БИСМИЛЛ$1Х1");
+        lineStrRendered = lineStrRendered.replace(/БИСМИЛ?\s+ЛА/g, "БИСМИЛЛА"); 
+        lineStrRendered = lineStrRendered.replace(/БИСМИЛЛА([АЕО]?)Х1/g, "БИСМИЛЛЬА$1Х1"); 
         
         lineStrRendered = lineStrRendered.replace(/\s+/g, " ");
 
@@ -707,3 +680,4 @@ window.onload = renderSavedList;
 
 </body>
 </html>
+
