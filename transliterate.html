@@ -1,166 +1,74 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Транслитератор Корана (Таджвид)</title>
-    <style>
-        :root { 
-            --primary: #12513f; 
-            --primary-light: #1b6b54; 
-            --accent: #c5a880; 
-            --bg: #0b110e; 
-            --card: #141f1a; 
-            --text-muted: #8fa099;
-            --text-main: #e6eee9;
-            --danger: #9e3636;
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background: var(--card);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border: 1px solid var(--primary);
-        }
-        h1 { 
-            margin-top: 0; 
-            font-size: 1.8rem; 
-            text-align: center; 
-            color: var(--accent);
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            letter-spacing: 0.5px;
-        }
-        h2 {
-            font-size: 1.3rem;
-            color: var(--accent);
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--primary);
-            padding-bottom: 10px;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 10px;
-            color: var(--accent);
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        textarea {
-            width: 100%;
-            height: 300px;
-            padding: 15px;
-            background-color: rgba(11, 17, 14, 0.8);
-            color: var(--text-main);
-            border: 1px solid var(--primary-light);
-            border-radius: 8px;
-            font-size: 1.1rem;
-            resize: vertical;
-            box-sizing: border-box;
-            transition: all 0.3s ease;
-        }
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(197, 168, 128, 0.15);
-        }
-        textarea::placeholder { color: var(--text-muted); }
-        textarea::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-track { background: var(--bg); border-radius: 4px; }
-        textarea::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 4px; }
-        textarea::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-        .arabic-input {
-            font-family: "Amiri", "Scheherazade New", serif;
-            font-size: 1.6rem;
-            direction: rtl;
-            line-height: 2;
-            color: #ffffff;
-        }
-
-        .main-actions {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        button, .btn-upload {
-            padding: 16px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(18, 81, 63, 0.5);
-            text-align: center;
-            display: inline-block;
-            box-sizing: border-box;
-        }
-        button:hover, .btn-upload:hover { 
-            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
-            color: #ffffff;
-            border-color: #ffffff;
-        }
-        .btn-secondary {
-            background: rgba(18, 81, 63, 0.2);
-            border: 1px solid var(--primary-light);
-            font-size: 0.95rem;
-            padding: 12px;
-        }
-        
-        .saved-section { margin-top: 40px; }
-        .saved-toolbar { display: flex; gap: 15px; margin-bottom: 20px; }
-        .saved-list { display: flex; flex-direction: column; gap: 12px; }
-        .saved-item {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--primary-light);
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: border-color 0.2s;
-        }
-        .saved-item:hover { border-color: var(--accent); }
-        .saved-item-info { flex-grow: 1; overflow: hidden; }
-        .saved-item-title { font-weight: bold; color: var(--accent); font-size: 1.1rem; margin-bottom: 5px; }
-        .saved-item-preview { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }
-        .saved-item-actions { display: flex; gap: 10px; margin-left: 15px; flex-shrink: 0; }
-        
-        .btn-small { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; letter-spacing: 0.5px; }
-        .btn-delete { background: transparent; border-color: var(--danger); color: #e88686; box-shadow: none; }
-        .btn-delete:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-
-        @media(max-width: 768px) { 
-            .grid, .main-actions, .saved-toolbar { grid-template-columns: 1fr; flex-direction: column; }
-            .saved-item { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .saved-item-actions { margin-left: 0; width: 100%; justify-content: space-between; }
-            .saved-item-actions button { flex: 1; }
-        }
-    </style>
 </head>
 <body>
+
+<a href="https://hacker3846.github.io/Metrsayt/" class="hifz-global-back-btn" title="Вернуться в навигацию HIFZ">
+    <span class="hifz-btn-icon">✦</span>
+    <span class="hifz-btn-text">HIFZ Навигация</span>
+</a>
+
+<style>
+    .hifz-global-back-btn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #141f1a; /* Цвет карточки */
+        border: 1px solid rgba(197, 168, 128, 0.3); /* Матовое золото */
+        border-radius: 10px;
+        padding: 10px 16px;
+        color: #c5a880; /* Текст золотого цвета */
+        text-decoration: none;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+    }
+
+    .hifz-global-back-btn:hover {
+        transform: translateY(-2px);
+        background: #12513f; /* Глубокий зеленый при наведении */
+        color: #ffffff;
+        border-color: #c5a880;
+        box-shadow: 0 8px 25px rgba(18, 81, 63, 0.4);
+    }
+
+    .hifz-btn-icon {
+        font-size: 14px;
+        color: #c5a880;
+        transition: color 0.3s;
+    }
+
+    .hifz-global-back-btn:hover .hifz-btn-icon {
+        color: #ffffff;
+    }
+
+    /* Адаптив под мобилки: сжимаем до минималистичной кнопки-иконки */
+    @media (max-width: 480px) {
+        .hifz-global-back-btn {
+            top: 12px;
+            left: 12px;
+            padding: 12px;
+            border-radius: 50%; /* Превращается в круглую кнопку */
+            width: 40px;
+            height: 40px;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        .hifz-btn-text {
+            display: none; /* Прячем текст, чтобы не мешал */
+        }
+        .hifz-btn-icon {
+            font-size: 16px;
+        }
+    }
+</style>
 
 <div class="container">
     <h1>Точная транслитерация (Таджвид)</h1>
@@ -174,7 +82,7 @@
             <textarea id="cyrillicOutput" readonly placeholder="Здесь появится транслитерация..."></textarea>
         </div>
     </div>
-    
+
     <div class="main-actions">
         <button onclick="processText()">Транслитерировать</button>
         <button onclick="saveCurrentText()" class="btn-secondary">Сохранить в список</button>
@@ -256,20 +164,18 @@ function attachToPrev(tokens, currentIndex, consonantStr) {
 
 function processText() {
     let rawText = document.getElementById('arabicInput').value;
-    
-    // 1. Очистка от знаков остановок, айятов, саджд, хизбов и татвиля
-    let cleanText = rawText.replace(/ـ/g, ''); 
-    cleanText = cleanText.replace(/[٠-٩۝\.,:;ۖۗۘۙۚۛ۩۞ۜ]/g, '');
-    
-    // 2. Универсальная и мощная склейка "Бисмиллях" (любой сукун, любой алиф, ЛЮБЫЕ огласовки имени Аллаха)
-    cleanText = cleanText.replace(/بِس([ْۡ]?)مِ\s+([ٱا]لل[\u064B-\u065F\u0670]*هِ)/g, 'بِس$1مِ$2');
-    
+
+    // Предварительная склейка Бисмиллях и очистка от мусора
+    let cleanText = rawText.replace(/[٠-٩۝\.,:;]/g, '');
+    cleanText = cleanText.replace(/بِسْمِ ٱللَّٰهِ/g, 'بِسْمِٱللَّٰهِ');
+    cleanText = cleanText.replace(/بِسْمِ اللَّهِ/g, 'بِسْمِاللَّهِ');
+
     let lines = cleanText.split('\n');
     let outputLines = [];
 
     for (let line of lines) {
         if (line.trim().length === 0) { continue; }
-        
+
         let tokens = [];
         let current = null;
 
@@ -286,28 +192,27 @@ function processText() {
                     char: char, base: charMap[char].b, spec: charMap[char].s || '', type: charMap[char].t,
                     haraka: (char === 'آ') ? 'f' : null, shadda: false, sukun: false, tanween: null, 
                     madd: charMap[char].madd || false, longMadd: charMap[char].longMadd || false, 
-                    hasTilde: false, hasSpecialMadd: false, silent: false, isDaggerSeat: false,
-                    isStartWasl: false, forcedHaraka: null
+                    hasTilde: false, hasSpecialMadd: false, silent: false, isDaggerSeat: false
                 };
             } else if (current) {
                 if (char === 'َ') current.haraka = 'f';
                 if (char === 'ِ') current.haraka = 'k';
                 if (char === 'ُ') current.haraka = 'd';
-                
+
                 if (char === 'ً' || char === 'ࣰ') current.tanween = 'f'; 
                 if (char === 'ٍ' || char === 'ࣲ') current.tanween = 'k';
                 if (char === 'ٌ' || char === 'ࣱ') current.tanween = 'd';
-                
+
                 if (char === 'ْ' || char === 'ۡ') current.sukun = true;
                 if (char === 'ّ') current.shadda = true;
-                
+
                 if (char === 'ٓ' || char === 'ۤ') { current.longMadd = true; current.hasTilde = true; }
-                
+
                 if (char === 'ٰ') { 
                     current.haraka = 'f'; current.madd = true; 
                     if (['ى', 'ي', 'ی', 'و', 'ا'].includes(current.char)) { current.base = ''; current.isDaggerSeat = true; }
                 } 
-                
+
                 if (char === 'ٗ') { current.haraka = 'd'; current.madd = true; } 
                 if (char === 'ٖ') { current.haraka = 'k'; current.madd = true; } 
                 if (char === 'ۥ') { current.haraka = 'd'; current.madd = true; } 
@@ -320,8 +225,7 @@ function processText() {
 
         for (let i = 0; i < tokens.length; i++) {
             let tok = tokens[i];
-            // Сдвигаем танвин с алифа или я (макусура) на предыдущую букву
-            if ((tok.char === 'ا' || tok.char === 'ى') && tok.tanween) {
+            if (tok.char === 'ا' && tok.tanween) {
                 let p = i - 1;
                 while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
                 if (p >= 0) {
@@ -338,14 +242,9 @@ function processText() {
             let p = i - 1;
             while (p >= 0 && (tokens[p].isSpace || tokens[p].silent)) p--;
             let prev = (p >= 0) ? tokens[p] : null;
-            
-            // Если предыдущая буква с танвином, то пустая 'ى' или 'ا' становится немой (напр. هُدًى)
-            if (prev && prev.tanween && (tok.char === 'ا' || tok.char === 'ى') && !tok.haraka && !tok.sukun && !tok.tanween) {
-                tok.silent = true;
-            }
 
             let maddType = null;
-            let isMadd = !tok.haraka && !tok.sukun && !tok.shadda && !tok.tanween && !tok.silent;
+            let isMadd = !tok.haraka && !tok.sukun && !tok.shadda && !tok.tanween;
 
             if (tok.char === 'آ' || tok.isDaggerSeat) maddType = 'a';
             else if (isMadd) {
@@ -404,14 +303,9 @@ function processText() {
                     let afterLamTok = afterLamIdx < tokens.length ? tokens[afterLamIdx] : null;
 
                     let precededBySpeech = false;
-                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace && !tokens[p].silent) { precededBySpeech = true; break; } }
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
 
-                    if (precededBySpeech) {
-                        tok.silent = true; 
-                    } else { 
-                        tok.isStartWasl = true; 
-                        tok.forcedHaraka = 'f'; 
-                    }
+                    if (precededBySpeech) tok.silent = true; else tok.forcedA = true;
 
                     if (afterLamTok && !afterLamTok.isSpace) {
                         let isSun = sunLetters.includes(afterLamTok.char);
@@ -428,30 +322,8 @@ function processText() {
                     }
                 } else {
                     let precededBySpeech = false;
-                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace && !tokens[p].silent) { precededBySpeech = true; break; } }
-                    
-                    if (precededBySpeech && tok.char === 'ٱ') {
-                        tok.silent = true;
-                    } else if (!precededBySpeech && tok.char === 'ٱ') {
-                        // Динамическое вычисление огласовки для начального ٱ в глаголах
-                        let realConsonants = 0;
-                        let thirdHaraka = 'k'; 
-                        for(let k = i; k < tokens.length; k++) {
-                            if (!tokens[k].isSpace && !tokens[k].silent && tokens[k].char !== 'ٱ') {
-                                realConsonants++;
-                                if (realConsonants === 2 && tokens[k].shadda) {
-                                    if (tokens[k].haraka === 'd') thirdHaraka = 'd';
-                                    break;
-                                }
-                                if (realConsonants === 3) {
-                                    if (tokens[k].haraka === 'd') thirdHaraka = 'd';
-                                    break;
-                                }
-                            }
-                        }
-                        tok.isStartWasl = true;
-                        tok.forcedHaraka = thirdHaraka;
-                    }
+                    for (let p = i - 1; p >= 0; p--) { if (!tokens[p].isSpace) { precededBySpeech = true; break; } }
+                    if (precededBySpeech && tok.char === 'ٱ') tok.silent = true;
                 }
             }
         }
@@ -479,7 +351,7 @@ function processText() {
                         else if (nextTok.char === 'ن') r = '*Н';
                         else if (nextTok.char === 'ل') r = 'Л';
                         else if (nextTok.char === 'ر') r = 'Р';
-                        
+
                         if (hasSukunNun) tok.overrideRender = r;
                         if (hasTanween) tok.tanweenOverride = r;
                     } else if (nextTok.char === 'ب') {
@@ -503,7 +375,7 @@ function processText() {
             let b = tok.base; let s = tok.spec || '';
             if (tok.char === 'ل') s = (tok.sukun || tok.hideFirstOfShadda || tok.shadda || tok.attachNextConsonant) ? 'Ь' : ''; 
 
-            if ((hamzaLetters.includes(tok.char)) && !tok.isStartWasl) {
+            if ((hamzaLetters.includes(tok.char)) && !tok.forcedA) {
                 let isFirstPronounced = true;
                 for (let j = t - 1; j >= 0; j--) {
                     if (tokens[j].isSpace) break;
@@ -513,7 +385,7 @@ function processText() {
                 }
                 b = isFirstPronounced ? '' : 'Ъ';
             }
-            if (tok.isStartWasl) { b = ''; s = ''; tok.haraka = tok.forcedHaraka; }
+            if (tok.forcedA) { b = ''; s = ''; tok.haraka = 'f'; }
 
             let cons = b + s;
             if (tok.shadda && !tok.hideFirstOfShadda) cons = b + b + s;
@@ -541,21 +413,15 @@ function processText() {
             if (tok.attachNextConsonant) lineStrRendered += tok.attachNextConsonant;
         }
 
-        // --- УЛУЧШЕННЫЕ ПРАВИЛА ИСКЛЮЧЕНИЙ ДЛЯ АЛЛАХА И БИСМИЛЛЯХ ---
-        // Мягкая Л (ЛЛЬА) после касры
-        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛАА?Х1/g, "$1ЛЛЬАХ1");
-        lineStrRendered = lineStrRendered.replace(/([ИЫ])ЛЛА([АЕО]?)Х1/g, "$1ЛЛЬА$2Х1"); 
-        
-        // Твердая Л после фатхи/даммы
-        lineStrRendered = lineStrRendered.replace(/Л\s+ЛАА?Х1/g, "ЛЛАХ1");
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛААХ1/g, "$1ЛЛЬАХ1");
+        lineStrRendered = lineStrRendered.replace(/([ИЫ])\s*Л\s+ЛАХ1/g, "$1ЛЛЬАХ1");
+        lineStrRendered = lineStrRendered.replace(/Л\s+ЛААХ1/g, "ЛЛАХ1");
         lineStrRendered = lineStrRendered.replace(/Л\s+ЛАОХ1/g, "ЛЛОХ1");
         lineStrRendered = lineStrRendered.replace(/РОХЬМААН/g, "РОХЬМАН");
-        
-        // Гарантированная склейка слова Аллах после Бисми (если вдруг скрипт их разделил)
-        lineStrRendered = lineStrRendered.replace(/БИСМИЛ\s+Л([АЯЬ])Х1/g, "БИСМИЛЛ$1Х1");
-        lineStrRendered = lineStrRendered.replace(/БИСМИЛ?\s+ЛА/g, "БИСМИЛЛА"); 
-        lineStrRendered = lineStrRendered.replace(/БИСМИЛЛА([АЕО]?)Х1/g, "БИСМИЛЛЬА$1Х1"); 
-        
+
+        // НОВЫЙ ШТРИХ: принудительная склейка Бисмиллях
+        lineStrRendered = lineStrRendered.replace(/БИСМИ\s+ЛЛА/g, "БИСМИЛЛА");
+
         lineStrRendered = lineStrRendered.replace(/\s+/g, " ");
 
         outputLines.push(lineStrRendered.trim());
@@ -620,7 +486,7 @@ function renderSavedList() {
     [...savedData].reverse().forEach(item => {
         const div = document.createElement('div');
         div.className = 'saved-item';
-        
+
         let preview = item.cyrillic ? item.cyrillic.substring(0, 60) + '...' : 'Нет транслитерации';
 
         div.innerHTML = `
@@ -680,4 +546,3 @@ window.onload = renderSavedList;
 
 </body>
 </html>
-
