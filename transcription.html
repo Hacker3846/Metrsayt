@@ -67,7 +67,7 @@
             border-color: var(--accent); 
             box-shadow: 0 0 5px rgba(197, 168, 128, 0.3);
         }
-        textarea { height: 100px; resize: vertical; font-size: 16px; }
+        textarea { height: 120px; resize: vertical; font-size: 14px; font-family: monospace; }
 
         .editor-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
         @media (max-width: 768px) { .editor-layout { grid-template-columns: 1fr; } }
@@ -124,45 +124,36 @@
             box-shadow: none;
         }
 
-        .mode-row { display: flex; gap: 10px; margin-bottom: 12px; }
-        .mode-btn { 
-            flex: 1; 
-            background: #1a2922; 
-            border: 1px solid #283e34; 
-            color: var(--text-muted); 
-            padding: 10px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 13px; 
-            text-align: center;
-            transition: 0.15s;
-        }
-        .mode-btn.active { 
-            background: var(--primary); 
-            border-color: rgba(197, 168, 128, 0.4); 
-            color: var(--accent); 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-
         .workspace { 
             background: #1a2922; 
             border: 1px solid #283e34; 
             border-radius: 12px; 
             padding: 15px; 
-            min-height: 200px; 
-            max-height: 350px; 
+            min-height: 220px; 
+            max-height: 380px; 
             overflow-y: auto; 
             text-align: left; 
             direction: ltr; 
-            font-size: 24px; 
-            line-height: 1.9; 
-            font-family: Georgia, serif;
         }
-        .chunk { padding: 2px 4px; margin: 0 2px; border-radius: 6px; color: #50675c; transition: 0.12s; display: inline-block; }
-        .chunk.ready { color: var(--text-muted); border-bottom: 2px dashed #283e34; }
-        .chunk.current { color: #141f1a; background: var(--accent); font-weight: bold; box-shadow: 0 0 12px var(--accent); }
-        .chunk.done { color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--accent); }
+        
+        .chunk { 
+            padding: 6px 10px; 
+            margin: 4px; 
+            border-radius: 8px; 
+            color: #50675c; 
+            transition: 0.12s; 
+            display: inline-flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center;
+            vertical-align: top;
+            line-height: 1.2;
+            cursor: pointer;
+        }
+        .chunk.ready { color: var(--text-muted); border: 1px dashed #283e34; }
+        .chunk.current { color: #141f1a; background: var(--accent); font-weight: bold; box-shadow: 0 0 12px var(--accent); border: 1px solid var(--accent); }
+        .chunk.current small { color: #222; }
+        .chunk.done { color: var(--accent); font-weight: bold; border: 1px solid var(--accent); }
 
         .status-text { font-weight: bold; font-size: 14px; margin-top: 5px; color: var(--accent); text-align: center; white-space: pre-line; }
         .stats { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; direction: ltr; text-align: left;}
@@ -188,7 +179,6 @@
             color: var(--accent);
         }
 
-        /* Стиль для блока настройки задержки */
         .lag-control-row {
             margin-top: 12px;
             display: flex;
@@ -232,11 +222,11 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        background: #141f1a; /* Цвет карточки */
-        border: 1px solid rgba(197, 168, 128, 0.3); /* Матовое золото */
+        background: #141f1a;
+        border: 1px solid rgba(197, 168, 128, 0.3);
         border-radius: 10px;
         padding: 10px 16px;
-        color: #c5a880; /* Текст золотого цвета */
+        color: #c5a880;
         text-decoration: none;
         font-family: 'Segoe UI', Roboto, sans-serif;
         font-size: 13px;
@@ -250,7 +240,7 @@
 
     .hifz-global-back-btn:hover {
         transform: translateY(-2px);
-        background: #12513f; /* Глубокий зеленый при наведении */
+        background: #12513f;
         color: #ffffff;
         border-color: #c5a880;
         box-shadow: 0 8px 25px rgba(18, 81, 63, 0.4);
@@ -266,20 +256,19 @@
         color: #ffffff;
     }
 
-    /* Адаптив под мобилки: сжимаем до минималистичной кнопки-иконки */
     @media (max-width: 480px) {
         .hifz-global-back-btn {
             top: 12px;
             left: 12px;
             padding: 12px;
-            border-radius: 50%; /* Превращается в круглую кнопку */
+            border-radius: 50%;
             width: 40px;
             height: 40px;
             justify-content: center;
             box-sizing: border-box;
         }
         .hifz-btn-text {
-            display: none; /* Прячем текст, чтобы не мешал */
+            display: none;
         }
         .hifz-btn-icon {
             font-size: 16px;
@@ -312,13 +301,12 @@
     <div class="editor-layout">
         <div class="card" style="margin-top:0;">
             <h3 style="margin-top:0; font-size:16px; color: var(--accent);">Шаг 1: Подготовка транскрипции</h3>
-            
-            <div class="mode-row">
-                <div id="modeWord" class="mode-btn active" onclick="setSplitMode('word')">По словам (Рекомендуется)</div>
-                <div id="modeChar" class="mode-btn" onclick="setSplitMode('char')">По буквам</div>
-            </div>
 
-            <textarea id="rawTextInput" placeholder="Вставьте сюда текст транскрипции (например: Бисмилляхи р-Рахмани р-Рахим)..." oninput="resetWorkspace()"></textarea>
+            <select id="savedTextSelect" onchange="loadSavedText(this.value)" style="margin-bottom: 12px; background: #141f1a; border-color: var(--primary-light);">
+                <option value="">Загрузка базы транслитератора...</option>
+            </select>
+            
+            <textarea id="rawTextInput" placeholder='Вставьте сюда JSON-массив объектов или выберите текст из списка выше...' oninput="resetWorkspace()"></textarea>
             
             <button class="btn btn-primary" id="btnBuild" onclick="buildTokens()">1. Сгенерировать токены разметки</button>
             <hr>
@@ -361,7 +349,6 @@
 
     let allSurahs = [];
     let selectedSurahId = null;
-    let splitMode = 'word'; 
     
     let tokensArray = [];   
     let timingsArray = [];  
@@ -369,6 +356,53 @@
 
     const adminPlayer = document.getElementById('adminPlayer');
     const statusOutput = document.getElementById('statusOutput');
+
+    // === ИНТЕГРАЦИЯ С ТРАНСЛИТЕРАТОРОМ ===
+    let savedTransliterations = {};
+
+    // ВАЖНО: Замени 'transliterations_node' на реальный путь в базе Firebase 
+    const TRANSLITERATOR_DB_PATH = 'transliterations_node'; 
+
+    database.ref(TRANSLITERATOR_DB_PATH).on('value', (snap) => {
+        const select = document.getElementById('savedTextSelect');
+        select.innerHTML = '<option value="">-- Выберите сохраненный текст суры --</option>';
+        
+        if(snap.exists()) {
+            savedTransliterations = snap.val();
+            
+            for (let key in savedTransliterations) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                
+                let displayName = savedTransliterations[key].title || savedTransliterations[key].name || `Сура / Текст: ${key}`;
+                opt.textContent = displayName;
+                
+                select.appendChild(opt);
+            }
+        } else {
+            select.innerHTML = '<option value="">Нет сохраненных текстов в базе</option>';
+        }
+    });
+
+    function loadSavedText(key) {
+        if (!key || !savedTransliterations[key]) {
+            document.getElementById('rawTextInput').value = '';
+            return;
+        }
+        
+        let dataToLoad = savedTransliterations[key].items || savedTransliterations[key].data || savedTransliterations[key];
+        
+        const jsonString = typeof dataToLoad === 'object' ? JSON.stringify(dataToLoad, null, 2) : dataToLoad;
+        
+        document.getElementById('rawTextInput').value = jsonString;
+        
+        statusOutput.textContent = "Текст успешно подгружен из базы. Нажми «Сгенерировать токены».";
+        resetWorkspace();
+        
+        // Автогенерация токенов (раскомментировать по необходимости):
+        // buildTokens(); 
+    }
+    // =====================================
 
     database.ref('surahs').on('value', (snap) => {
         if(!snap.exists()) return;
@@ -456,24 +490,20 @@
             adminPlayer.src = track.audio;
             adminPlayer.load();
             
-            statusOutput.textContent = "Аудиозапись загружена. Вставьте текст транскрипции.";
+            statusOutput.textContent = "Аудиозапись загружена. Вставьте готовый JSON-массив объектов.";
             database.ref('surahs/' + id + '/markup').get().then(snap => {
-                if (snap.exists() && snap.val().text) {
-                    if(confirm("Для этой аудиозаписи в базе уже есть разметка. Загрузить её для редактирования?")) {
-                        document.getElementById('rawTextInput').value = snap.val().text;
+                if (snap.exists() && snap.val().items) {
+                    if(confirm("Для этой аудиозаписи в базе уже есть разметка нового формата. Загрузить её для редактирования?")) {
+                        const items = snap.val().items;
+                        document.getElementById('rawTextInput').value = JSON.stringify(items, null, 2);
                         statusOutput.textContent = "Загружена существующая разметка из базы данных.";
-                        buildTokens(snap.val().timings);
+                        
+                        const loadedTimings = items.map(item => item.time !== undefined ? item.time : null);
+                        buildTokens(loadedTimings);
                     }
                 }
             });
         }
-    }
-
-    function setSplitMode(mode) {
-        splitMode = mode;
-        document.getElementById('modeWord').classList.toggle('active', mode === 'word');
-        document.getElementById('modeChar').classList.toggle('active', mode === 'char');
-        resetWorkspace();
     }
 
     function resetWorkspace() {
@@ -490,13 +520,17 @@
 
     function buildTokens(existingTimings = null) {
         const text = document.getElementById('rawTextInput').value.trim();
-        if(!text) { alert("Сначала введите текст транскрипции!"); return; }
+        if(!text) { alert("Сначала введите массив JSON объектов!"); return; }
         if(!selectedSurahId) { alert("Сначала выберите суру из списка!"); return; }
 
-        if (splitMode === 'word') {
-            tokensArray = text.split(/\s+/);
-        } else {
-            tokensArray = text.split('');
+        try {
+            tokensArray = JSON.parse(text);
+            if (!Array.isArray(tokensArray)) {
+                throw new Error("Введенные данные должны быть массивом!");
+            }
+        } catch(e) {
+            alert("Ошибка парсинга JSON! Убедитесь, что строка валидна и содержит массив объектов [{id, ar, cy}].\nТекст ошибки: " + e.message);
+            return;
         }
 
         timingsArray = new Array(tokensArray.length).fill(null);
@@ -523,8 +557,24 @@
         tokensArray.forEach((token, idx) => {
             const span = document.createElement('span');
             span.className = 'chunk';
-            span.textContent = splitMode === 'word' ? token + ' ' : token;
             span.setAttribute('data-editor-idx', idx);
+
+            const arSpan = document.createElement('span');
+            arSpan.style.fontFamily = "Georgia, serif";
+            arSpan.style.fontSize = "26px";
+            arSpan.style.direction = "rtl";
+            arSpan.textContent = token.ar || "";
+
+            const cySmall = document.createElement('small');
+            cySmall.style.fontFamily = "sans-serif";
+            cySmall.style.fontSize = "13px";
+            cySmall.style.opacity = "0.75";
+            cySmall.style.display = "block";
+            cySmall.style.marginTop = "3px";
+            cySmall.textContent = token.cy || "";
+
+            span.appendChild(arSpan);
+            span.appendChild(cySmall);
 
             if (idx === currentIndex) {
                 span.classList.add('current');
@@ -535,7 +585,7 @@
             }
 
             span.onclick = () => {
-                if(timingsArray[idx] !== null) {
+                if(timingsArray[idx] !== null && timingsArray[idx] !== undefined) {
                     adminPlayer.currentTime = timingsArray[idx];
                 }
             };
@@ -561,7 +611,6 @@
     function recordNextTiming() {
         if (currentIndex >= tokensArray.length) return;
 
-        // ИЗМЕНЕНИЕ: Читаем компенсацию задержки прямо из инпута в момент клика
         const lagInput = document.getElementById('lagInput');
         const audioLagCompensation = parseFloat(lagInput.value) || 0;
 
@@ -608,15 +657,23 @@
         }
     }
 
+    function generateOutputStructure() {
+        return tokensArray.map((token, idx) => ({
+            id: token.id || (idx + 1),
+            ar: token.ar || "",
+            cy: token.cy || "",
+            time: timingsArray[idx]
+        }));
+    }
+
     function saveMarkupToFirebase() {
         if (!selectedSurahId) return;
         
-        let finalText = (splitMode === 'word') ? tokensArray.join(' ') : tokensArray.join('');
         statusOutput.textContent = "Сохранение разметки в Firebase...";
+        const itemsToSave = generateOutputStructure();
 
         database.ref('surahs/' + selectedSurahId + '/markup').set({
-            text: finalText,
-            timings: timingsArray
+            items: itemsToSave
         }).then(() => {
             statusOutput.textContent = "🎉 Разметка успешно сохранена в базу данных!";
             alert("Успешно сохранено!");
@@ -630,13 +687,11 @@
         if (!selectedSurahId) return;
         
         const track = allSurahs.find(s => s.id === selectedSurahId);
-        const textToSave = document.getElementById('rawTextInput').value.trim();
+        const itemsToSave = generateOutputStructure();
         
         const data = {
             surahId: selectedSurahId,
-            text: textToSave,
-            timings: timingsArray,
-            splitMode: splitMode
+            items: itemsToSave
         };
         
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -691,11 +746,14 @@
                 try {
                     const data = JSON.parse(event.target.result);
                     
-                    document.getElementById('rawTextInput').value = data.text || "";
-                    if(data.splitMode) setSplitMode(data.splitMode);
-                    buildTokens(data.timings);
-                    
-                    statusOutput.textContent = "Локальная разметка применена к выбранной суре (имя файла проигнорировано).";
+                    if (data.items) {
+                        document.getElementById('rawTextInput').value = JSON.stringify(data.items, null, 2);
+                        const loadedTimings = data.items.map(item => item.time !== undefined ? item.time : null);
+                        buildTokens(loadedTimings);
+                        statusOutput.textContent = "Локальная разметка применена к выбранной суре.";
+                    } else {
+                        alert("В файле отсутствует массив 'items'. Убедитесь в правильности формата.");
+                    }
                     document.getElementById('btnSave').disabled = false;
                     document.getElementById('btnExport').disabled = false;
                 } catch (err) {
@@ -781,10 +839,9 @@
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (data.text && data.timings) {
+                        if (data.items) {
                             database.ref('surahs/' + matchedSurah.id + '/markup').set({
-                                text: data.text,
-                                timings: data.timings
+                                items: data.items
                             }).then(() => {
                                 successCount++;
                                 resolve();

@@ -76,7 +76,6 @@
             position: sticky;
             top: 0;
             z-index: 1005;
-            * background: var(--bg);
             padding: 10px 0;
             width: 100%;
             box-sizing: border-box;
@@ -257,6 +256,54 @@
         }
         .hadith-title { font-size: 11px; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }
         .hadith-text { font-size: 14px; line-height: 1.5; color: #cbd6d0; font-style: italic; }
+
+        /* Элегантный переключатель языков (Арабский / Кириллица) */
+        .lang-switch-container {
+            display: flex;
+            justify-content: center;
+            background: #1a2922;
+            border-radius: 12px;
+            padding: 6px;
+            border: 1px solid #283e34;
+            width: fit-content;
+            margin: 0 auto 25px auto;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .lang-switch-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 25px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .lang-switch-btn.active {
+            background: var(--primary);
+            color: var(--accent);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Блоки для Аятов и Басмалы */
+        #karaokeTextWrapper {
+            transition: direction 0.3s, text-align 0.3s, font-size 0.3s;
+        }
+        .ayah-block {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed rgba(197, 168, 128, 0.15);
+            line-height: 2.2;
+        }
+        .basmala-block {
+            text-align: center !important;
+            font-size: 1.1em;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            color: #e0bc8c;
+        }
     </style>
 </head>
 <body>
@@ -410,6 +457,30 @@
     let selectedSurahNum = null;
     let selectedReaderName = null;
     let selectedTrackId = null;
+
+    let currentKaraokeLang = 'ar';
+
+    window.setKaraokeLang = function(lang) {
+        currentKaraokeLang = lang;
+        
+        const btnAr = document.getElementById('btnLangAr');
+        const btnCy = document.getElementById('btnLangCy');
+        if(btnAr) btnAr.classList.toggle('active', lang === 'ar');
+        if(btnCy) btnCy.classList.toggle('active', lang === 'cy');
+        
+        const wrapper = document.getElementById('karaokeTextWrapper');
+        if(wrapper) {
+            // Меняем направление текста: RTL для Арабского, LTR для Кириллицы
+            wrapper.style.direction = lang === 'ar' ? 'rtl' : 'ltr';
+            wrapper.style.textAlign = lang === 'ar' ? 'right' : 'left';
+            wrapper.style.fontSize = lang === 'ar' ? '28px' : '22px';
+        }
+
+        clientSpansCache.forEach(span => {
+            const text = span.getAttribute('data-' + lang);
+            if(text) span.textContent = text + ' ';
+        });
+    };
 
     // --- ПЕРЕМЕННЫЕ УМНОГО МИКРОФОНА ---
     let isMicActive = false;
@@ -723,47 +794,101 @@
 
         database.ref('surahs/' + trackId + '/markup').get().then(snap => {
             container.innerHTML = "";
-            if(!snap.exists() || !snap.val().text) { 
+            if(!snap.exists()) { 
                 container.innerHTML = "<p style='text-align:center; font-size:14px; color:var(--text-muted);'>Разметка караоке «Тилява» отсутствует для этой части.</p>"; 
                 return; 
             }
 
             const data = snap.val();
-            let rawTimings = data.timings || [];
             
-            let safeTimingsArray = [];
-            if (Array.isArray(rawTimings)) {
-                safeTimingsArray = rawTimings;
-            } else {
-                let maxKey = Math.max(...Object.keys(rawTimings).map(Number));
-                for(let i = 0; i <= maxKey; i++) {
-                    safeTimingsArray.push(rawTimings[i] !== undefined ? rawTimings[i] : null);
-                }
-            }
+            // Встраиваем переключатель языков и контейнер для текста
+            container.innerHTML = `
+                <div class="lang-switch-container" id="langSwitchWrapper" style="display:none;">
+                    <button id="btnLangAr" class="lang-switch-btn active" onclick="setKaraokeLang('ar')">Арабский</button>
+                    <button id="btnLangCy" class="lang-switch-btn" onclick="setKaraokeLang('cy')">Кириллица</button>
+                </div>
+                <div id="karaokeTextWrapper"></div>
+            `;
+            const textWrapper = document.getElementById('karaokeTextWrapper');
 
-            currentMarkup = {
-                text: data.text,
-                timings: safeTimingsArray
-            };
+            // ==== ОБРАБОТКА НОВОГО ФОРМАТА (items) ====
+            if (data.items && Array.isArray(data.items)) {
+                document.getElementById('langSwitchWrapper').style.display = 'flex';
+                currentMarkup = { timings: [] };
+                
+                let currentAyahDiv = document.createElement('div');
+                currentAyahDiv.className = 'ayah-block basmala-block'; // Изначально считаем Басмалой
+                let isBasmalaBlock = true;
 
-            let cleanText = currentMarkup.text.trim();
-            let tokens = cleanText.includes(' ') ? cleanText.split(/\s+/) : cleanText.split('');
-            
-            tokens.forEach((token, idx) => {
-                const span = document.createElement('span');
-                span.className = 'char-span';
-                span.textContent = cleanText.includes(' ') ? token + ' ' : token;
-                span.setAttribute('data-idx', idx);
-
-                span.onclick = () => {
-                    if(currentMarkup.timings[idx] !== undefined && currentMarkup.timings[idx] !== null) {
-                        mainPlayer.currentTime = Number(currentMarkup.timings[idx]);
-                        if (isMicActive) wasTrackPlaying = true; 
+                data.items.forEach((item, idx) => {
+                    // Если тайминги пошли больше 0 — закрываем блок Басмалы и открываем первый аят
+                    if (isBasmalaBlock && item.time > 0 && idx > 0) {
+                        textWrapper.appendChild(currentAyahDiv);
+                        currentAyahDiv = document.createElement('div');
+                        currentAyahDiv.className = 'ayah-block';
+                        isBasmalaBlock = false;
                     }
-                };
-                container.appendChild(span);
-                clientSpansCache.push(span); 
-            });
+
+                    const span = document.createElement('span');
+                    span.className = 'char-span';
+                    span.setAttribute('data-ar', item.ar);
+                    span.setAttribute('data-cy', item.cy || item.ar); 
+                    span.setAttribute('data-idx', idx);
+                    
+                    span.onclick = () => {
+                        if(item.time !== undefined && item.time !== null) {
+                            mainPlayer.currentTime = Number(item.time);
+                            if (isMicActive) wasTrackPlaying = true; 
+                        }
+                    };
+                    
+                    currentMarkup.timings[idx] = Number(item.time);
+                    currentAyahDiv.appendChild(span);
+                    clientSpansCache.push(span);
+
+                    // Если в арабском тексте встречается конец аята (символ ۝ или цифры)
+                    if (!isBasmalaBlock && /[\u06DD\u0660-\u0669\u06F0-\u06F90-9]/.test(item.ar)) {
+                        textWrapper.appendChild(currentAyahDiv);
+                        currentAyahDiv = document.createElement('div');
+                        currentAyahDiv.className = 'ayah-block'; // Начинаем следующий аят
+                    }
+                });
+
+                if(currentAyahDiv.childNodes.length > 0) {
+                    textWrapper.appendChild(currentAyahDiv);
+                }
+                
+                setKaraokeLang(currentKaraokeLang); // Применяем текущий язык
+
+            } 
+            // ==== ОБРАБОТКА СТАРОГО ФОРМАТА (fallback) ====
+            else if (data.text) {
+                currentMarkup = { timings: data.timings || [] };
+                textWrapper.style.direction = 'ltr';
+                textWrapper.style.textAlign = 'left';
+                
+                let cleanText = data.text.trim();
+                let tokens = cleanText.includes(' ') ? cleanText.split(/\s+/) : cleanText.split('');
+                let currentAyahDiv = document.createElement('div');
+                currentAyahDiv.className = 'ayah-block';
+
+                tokens.forEach((token, idx) => {
+                    const span = document.createElement('span');
+                    span.className = 'char-span';
+                    span.textContent = cleanText.includes(' ') ? token + ' ' : token;
+                    span.setAttribute('data-idx', idx);
+
+                    span.onclick = () => {
+                        if(currentMarkup.timings[idx] !== undefined && currentMarkup.timings[idx] !== null) {
+                            mainPlayer.currentTime = Number(currentMarkup.timings[idx]);
+                            if (isMicActive) wasTrackPlaying = true; 
+                        }
+                    };
+                    currentAyahDiv.appendChild(span);
+                    clientSpansCache.push(span);
+                });
+                textWrapper.appendChild(currentAyahDiv);
+            }
 
             setTimeout(() => {
                 updateKaraokeHighlight(mainPlayer.currentTime);
@@ -852,7 +977,6 @@
         }
     }
 
-    // ОБНОВЛЕННАЯ ФУНКЦИЯ ИЗМЕНЕНИЯ ЧУВСТВИТЕЛЬНОСТИ
     function changeMicSensitivity(val) {
         micSensitivity = parseInt(val);
         document.getElementById('micVal').textContent = val;
@@ -868,7 +992,6 @@
         }
     }
 
-    // ОБНОВЛЕННАЯ ЛОГИКА АНАЛИЗА ЗВУКА
     function listenToMicrophone() {
     if (!isMicActive) return;
     requestAnimationFrame(listenToMicrophone);
@@ -886,7 +1009,6 @@
     let actualThreshold = 105 - micSensitivity;
 
     if (volume > actualThreshold) {
-        // Если пошел звук — отменяем таймер тишины, если он был
         if (silenceTimer) {
             clearTimeout(silenceTimer);
             silenceTimer = null;
@@ -904,20 +1026,16 @@
             }
         }
     } else {
-        // Звук ниже порога. Если мы говорили, но таймер еще не запущен:
         if (isUserSpeaking && !silenceTimer) {
             
-            // Запускаем ровно ОДИН таймер на 0.5 секунды
             silenceTimer = setTimeout(() => {
                 isUserSpeaking = false;
-                silenceTimer = null; // Очищаем статус таймера
+                silenceTimer = null; 
                 btnSmartMic.classList.remove('mic-active-pulse');
                 
-                // Если плеер играл до этого, снимаем с паузы
                 if (wasTrackPlaying && mainPlayer.paused && mainPlayer.src) {
                     mainPlayer.currentTime = Math.max(0, mainPlayer.currentTime - 0.3);
                     
-                    // .catch нужен, чтобы браузер не ругался в консоли, если прервать плей
                     mainPlayer.play().catch(e => console.log("Плеер ожидает:", e)); 
                 }
             }, 700); 
@@ -941,10 +1059,12 @@
             if (!span) continue;
 
             const startTime = timings[i];
-            
             let endTime = duration;
+            
             for (let j = i + 1; j < timings.length; j++) {
-                if (timings[j] !== null && timings[j] !== undefined) {
+                // ИСПРАВЛЕНИЕ: Ищем тайминг, который СТРОГО БОЛЬШЕ текущего.
+                // Это позволит выделить всю Басмалу (все слова с time: 0) разом.
+                if (timings[j] !== null && timings[j] !== undefined && Number(timings[j]) > Number(startTime)) {
                     endTime = Number(timings[j]);
                     break;
                 }
@@ -1057,3 +1177,4 @@
 </script>
 </body>
 </html>
+
