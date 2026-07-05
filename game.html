@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Комната №9 — Допрос</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --ink:#12100E;
+    --ink-soft:#1B1815;
+    --ink-raised:#221E19;
+    --parchment:#F2ECDD;
+    --parchment-dim:#D9D2BE;
+    --oxide:#C4402B;
+    --oxide-dim:#8A3324;
+    --duel-green:#3C6E5C;
+    --duel-green-dim:#2C5245;
+    --stone:#8A8377;
+    --stone-dim:#5E594F;
+    --bulb:#E8B84B;
+    --font-display:'Fraunces', serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--parchment);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit;}
+
+  /* ---------- shared ---------- */
+  .screen{
+    min-height:100vh;
+    display:none;
+  }
+  .screen.active{display:block;}
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 24px;
+    border-bottom:1px solid var(--stone-dim);
+  }
+  .brand{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--stone);
+  }
+  .settings-link{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--stone);
+    text-decoration:none;
+    border:1px solid var(--stone-dim);
+    padding:6px 12px;
+    border-radius:3px;
+  }
+  .settings-link:hover{color:var(--oxide); border-color:var(--oxide);}
+
+  button{font-family:inherit; cursor:pointer;}
+
+  /* ---------- SETUP: room select ---------- */
+  .setup-wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:40px 20px 80px;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--stone);
+    margin-bottom:8px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(28px,5vw,40px);
+    margin:0 0 8px;
+  }
+  .lede{
+    color:var(--stone);
+    font-size:14px;
+    line-height:1.5;
+    max-width:520px;
+    margin-bottom:32px;
+  }
+  .section-label{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--stone);
+    margin:28px 0 12px;
+  }
+  .room-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+  }
+  @media (max-width:640px){ .room-grid{grid-template-columns:repeat(2,1fr);} }
+  .room-card{
+    position:relative;
+    aspect-ratio:1.1;
+    border:1px solid var(--stone-dim);
+    border-radius:4px;
+    background:var(--ink-soft);
+    overflow:hidden;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    text-align:left;
+    transition:border-color 0.15s ease, transform 0.15s ease;
+  }
+  .room-card:hover{border-color:var(--oxide); transform:translateY(-2px);}
+  .room-card.selected{border-color:var(--duel-green); box-shadow:0 0 0 1px var(--duel-green);}
+  .room-card .room-num{
+    position:absolute; top:10px; right:12px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--stone);
+  }
+  .room-card .room-name{
+    font-family:var(--font-display);
+    font-size:16px;
+    font-weight:600;
+    line-height:1.2;
+  }
+  .room-card .room-tone{
+    position:absolute; inset:0;
+    opacity:0.5;
+    pointer-events:none;
+  }
+  .room-card .room-occupancy{
+    position:absolute; top:10px; left:12px;
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--duel-green);
+    letter-spacing:0.04em;
+  }
+
+  .mode-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .mode-btn{
+    flex:1;
+    min-width:180px;
+    background:var(--ink-soft);
+    border:1px solid var(--stone-dim);
+    color:var(--parchment);
+    padding:16px;
+    border-radius:4px;
+    text-align:left;
+  }
+  .mode-btn:hover{border-color:var(--oxide);}
+  .mode-btn.selected{border-color:var(--duel-green); box-shadow:0 0 0 1px var(--duel-green);}
+  .mode-btn .mode-title{
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:4px;
+  }
+  .mode-btn .mode-hint{
+    font-size:12px;
+    color:var(--stone);
+    line-height:1.4;
+  }
+
+  .btn-primary{
+    background:var(--oxide);
+    border:none;
+    color:var(--parchment);
+    padding:14px 26px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.03em;
+    border-radius:3px;
+  }
+  .btn-primary:hover{background:var(--oxide-dim);}
+  .btn-primary:disabled{opacity:0.35; cursor:not-allowed;}
+  .setup-footer{
+    margin-top:36px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .setup-warning{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--stone);
+    line-height:1.6;
+    max-width:480px;
+  }
+  .setup-warning.err{color:var(--oxide);}
+
+  /* ---------- AI PRE-MATCH SETUP ---------- */
+  .role-row, .diff-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .role-btn{
+    flex:1;
+    min-width:200px;
+    background:var(--ink-soft);
+    border:1px solid var(--stone-dim);
+    color:var(--parchment);
+    padding:16px;
+    border-radius:4px;
+    text-align:left;
+  }
+  .role-btn:hover{border-color:var(--oxide);}
+  .role-btn.selected{border-color:var(--duel-green); box-shadow:0 0 0 1px var(--duel-green);}
+  .role-btn .role-title{font-weight:600; font-size:14px; margin-bottom:4px;}
+  .role-btn .role-hint{font-size:12px; color:var(--stone); line-height:1.4;}
+
+  .slider-block{
+    background:var(--ink-soft);
+    border:1px solid var(--stone-dim);
+    border-radius:4px;
+    padding:16px;
+  }
+  .slider-block + .slider-block{margin-top:12px;}
+  .slider-block .slider-title{font-weight:600; font-size:13px; margin-bottom:2px;}
+  .slider-block .slider-hint{font-size:12px; color:var(--stone); line-height:1.4; margin-bottom:10px;}
+  .slider-block input[type="range"]{width:100%; accent-color:var(--oxide);}
+  .slider-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--stone);
+    margin-top:4px;
+  }
+  .slider-value{color:var(--duel-green);}
+  .range-two{display:flex; align-items:center; gap:10px;}
+  .range-two input{flex:1;}
+
+  /* ---------- LOADING ---------- */
+  .loading-wrap{
+    max-width:520px;
+    margin:0 auto;
+    padding:120px 20px;
+    text-align:center;
+  }
+  .loading-wrap .spinner-big{
+    width:32px;height:32px;
+    border:3px solid var(--stone-dim);
+    border-top-color:var(--oxide);
+    border-radius:50%;
+    margin:0 auto 20px;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-wrap .loading-title{
+    font-family:var(--font-display);
+    font-size:20px;
+    margin-bottom:8px;
+  }
+  .loading-wrap .loading-sub{
+    font-size:13px;
+    color:var(--stone);
+    font-family:var(--font-mono);
+  }
+  .loading-wrap .loading-err{
+    margin-top:24px;
+    padding:14px;
+    border:1px solid var(--oxide-dim);
+    border-radius:4px;
+    background:rgba(196,64,43,0.1);
+    color:var(--oxide);
+    font-family:var(--font-mono);
+    font-size:12px;
+    text-align:left;
+    white-space:pre-wrap;
+    display:none;
+  }
+  .loading-wrap .loading-err.show{display:block;}
+  .loading-wrap .btn-cancel-wait{
+    margin-top:24px;
+    background:transparent;
+    border:1px solid var(--stone-dim);
+    color:var(--stone);
+    padding:10px 18px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    border-radius:3px;
+  }
+  .loading-wrap .btn-cancel-wait:hover{border-color:var(--oxide); color:var(--oxide);}
+
+  /* ---------- GAME ---------- */
+  .game-layout{
+    display:grid;
+    grid-template-columns:200px minmax(0,1fr) 200px;
+    gap:0;
+    height:100vh;
+    position:relative;
+  }
+  .game-layout.commentary-hidden{grid-template-columns:0 minmax(0,1fr) 0;}
+  @media (max-width:900px){
+    .game-layout{grid-template-columns:1fr;}
+    .commentary-col{display:none;}
+  }
+  .commentary-col{
+    border-right:1px solid var(--stone-dim);
+    padding:16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    overflow-y:auto;
+    transition:padding 0.15s ease;
+  }
+  .game-layout.commentary-hidden .commentary-col{
+    padding:0; overflow:hidden; border-color:transparent;
+  }
+  .commentary-col.right{border-right:none; border-left:1px solid var(--stone-dim);}
+  .commentary-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--stone);
+    margin-bottom:4px;
+  }
+  .commentary-header.suspicious{color:var(--oxide);}
+  .commentary-header.sympathetic{color:var(--duel-green);}
+  .bubble{
+    font-size:12px;
+    line-height:1.4;
+    padding:9px 11px;
+    border-radius:4px;
+    border:1px solid var(--stone-dim);
+    background:var(--ink-soft);
+    opacity:1;
+    max-height:120px;
+    transform:translateY(0) scale(1);
+    transition:opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+    overflow:hidden;
+  }
+  .bubble.suspicious{border-color:var(--oxide-dim); color:var(--parchment-dim);}
+  .bubble.sympathetic{border-color:var(--duel-green-dim); color:var(--parchment-dim);}
+  .bubble.bubble-enter{opacity:0; transform:translateY(6px) scale(0.98);}
+  .bubble.bubble-exit{
+    opacity:0;
+    transform:translateY(-6px) scale(0.97);
+    max-height:0;
+    padding-top:0; padding-bottom:0;
+    margin-bottom:0 !important;
+    border-width:0;
+  }
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  /* переключатель видимости комментаторов (десктоп) */
+  .commentary-toggle-desktop{
+    position:fixed;
+    top:12px;
+    right:12px;
+    z-index:40;
+    background:var(--ink-soft);
+    border:1px solid var(--stone-dim);
+    color:var(--stone);
+    font-family:var(--font-mono);
+    font-size:11px;
+    padding:8px 12px;
+    border-radius:3px;
+  }
+  .commentary-toggle-desktop:hover{border-color:var(--oxide); color:var(--oxide);}
+  @media (max-width:900px){ .commentary-toggle-desktop{display:none;} }
+
+  /* мобильная шторка комментаторов — не перекрывает чат, кроме небольшой полосы */
+  .commentary-mobile-tab{
+    display:none;
+    position:fixed;
+    bottom:0; left:0; right:0;
+    z-index:47;
+    background:var(--ink-soft);
+    border-top:1px solid var(--stone-dim);
+    padding:10px 16px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--stone);
+    transition:background 0.2s ease, color 0.2s ease;
+    text-align:center;
+    letter-spacing:0.05em;
+  }
+  @media (max-width:900px){ .commentary-mobile-tab{display:block;} }
+  .commentary-mobile-tab.flash{
+    background:rgba(196,64,43,0.22);
+    color:var(--parchment);
+    animation:tabflash 1.2s ease;
+  }
+  @keyframes tabflash{
+    0%{background:rgba(196,64,43,0.35);}
+    100%{background:rgba(196,64,43,0);}
+  }
+  .commentary-mobile-sheet{
+    display:none;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    max-height:38vh;
+    z-index:46;
+    background:var(--ink-soft);
+    border-top:1px solid var(--stone-dim);
+    border-radius:10px 10px 0 0;
+    padding:12px 14px 16px;
+    overflow-y:auto;
+    box-shadow:0 -8px 24px rgba(0,0,0,0.4);
+  }
+  .commentary-mobile-sheet.show{display:block;}
+  .commentary-mobile-sheet .sheet-grip{
+    width:64px; height:20px;
+    display:flex; align-items:center; justify-content:center;
+    margin:-6px auto 6px;
+    cursor:pointer;
+  }
+  .commentary-mobile-sheet .sheet-grip::before{
+    content:'';
+    width:36px; height:4px; border-radius:2px;
+    background:var(--stone-dim);
+    transition:background 0.15s ease;
+  }
+  .commentary-mobile-sheet .sheet-grip:hover::before,
+  .commentary-mobile-sheet .sheet-grip:active::before{
+    background:var(--oxide);
+  }
+  .commentary-mobile-sheet .sheet-col{margin-bottom:10px;}
+  .commentary-mobile-sheet .sheet-col:last-child{margin-bottom:0;}
+  .commentary-mobile-sheet .bubble{margin-bottom:6px;}
+
+  .main-col{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .case-bar{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    border-bottom:1px solid var(--stone-dim);
+    background:var(--ink-soft);
+  }
+  .case-bar.hidden-case{display:none;}
+  .case-cell{
+    padding:10px 14px;
+    border-right:1px solid var(--stone-dim);
+  }
+  .case-cell:last-child{border-right:none;}
+  .case-cell .cc-label{
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--stone);
+    margin-bottom:3px;
+  }
+  .case-cell .cc-value{
+    font-size:13px;
+    font-weight:500;
+  }
+
+  .status-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 16px;
+    border-bottom:1px solid var(--stone-dim);
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .hearts{
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .hearts.hidden-hearts{display:none;}
+  .hearts .heart-label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--stone);
+    margin-right:6px;
+  }
+  .heart{
+    width:16px; height:16px;
+    color:var(--oxide);
+  }
+  .heart.lost{color:var(--stone-dim);}
+  .timer{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--stone);
+  }
+  .room-tag{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--stone);
+  }
+  .role-tag{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--duel-green);
+    border:1px solid var(--duel-green-dim);
+    padding:3px 8px;
+    border-radius:3px;
+  }
+
+  .chat-area{
+    flex:1;
+    overflow-y:auto;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .msg{
+    max-width:78%;
+    padding:10px 14px;
+    border-radius:6px;
+    font-size:14px;
+    line-height:1.45;
+  }
+  .msg.interrogator{
+    align-self:flex-end;
+    background:var(--oxide-dim);
+    color:var(--parchment);
+    border-bottom-right-radius:2px;
+  }
+  .msg.suspect{
+    align-self:flex-start;
+    background:var(--ink-raised);
+    border:1px solid var(--stone-dim);
+    border-bottom-left-radius:2px;
+  }
+  .msg.system{
+    align-self:center;
+    background:none;
+    border:1px dashed var(--stone-dim);
+    color:var(--stone);
+    font-family:var(--font-mono);
+    font-size:11px;
+    max-width:90%;
+    text-align:center;
+  }
+  .msg .msg-role{
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    opacity:0.65;
+    margin-bottom:4px;
+    display:block;
+  }
+  .tremor{
+    display:inline-block;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--oxide);
+    margin-left:8px;
+    letter-spacing:0.05em;
+  }
+
+  .typing-indicator{
+    align-self:flex-start;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--stone);
+    padding:6px 14px;
+  }
+
+  .composer{
+    display:flex;
+    gap:10px;
+    padding:14px 20px;
+    border-top:1px solid var(--stone-dim);
+    background:var(--ink-soft);
+  }
+  .composer input{
+    flex:1;
+    background:var(--ink);
+    border:1px solid var(--stone-dim);
+    color:var(--parchment);
+    padding:12px 14px;
+    font-family:var(--font-body);
+    font-size:14px;
+    border-radius:3px;
+  }
+  .composer input:focus{outline:2px solid var(--oxide); outline-offset:1px; border-color:var(--oxide);}
+  .composer button{
+    background:var(--duel-green);
+    border:none;
+    color:var(--parchment);
+    padding:0 20px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    border-radius:3px;
+  }
+  .composer button:hover{background:var(--duel-green-dim);}
+  .composer button:disabled{opacity:0.4; cursor:not-allowed;}
+
+  .action-bar{
+    display:flex;
+    gap:10px;
+    padding:14px 20px;
+    border-top:1px solid var(--stone-dim);
+    flex-wrap:wrap;
+  }
+  .action-bar.hidden-actions{display:none;}
+  .btn-torture{
+    flex:1;
+    min-width:160px;
+    background:var(--oxide);
+    border:none;
+    color:var(--parchment);
+    padding:13px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.03em;
+    border-radius:3px;
+  }
+  .btn-torture:hover:not(:disabled){background:var(--oxide-dim);}
+  .btn-torture:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn-release{
+    flex:1;
+    min-width:160px;
+    background:transparent;
+    border:1px solid var(--duel-green);
+    color:var(--duel-green);
+    padding:13px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.03em;
+    border-radius:3px;
+  }
+  .btn-release:hover:not(:disabled){background:rgba(60,110,92,0.12);}
+  .btn-release:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn-surrender{
+    flex:1;
+    min-width:160px;
+    background:transparent;
+    border:1px solid var(--oxide-dim);
+    color:var(--oxide);
+    padding:13px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.03em;
+    border-radius:3px;
+  }
+  .btn-surrender:hover:not(:disabled){background:rgba(196,64,43,0.12);}
+  .btn-surrender:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn-surrender.hidden{display:none;}
+
+  /* ---------- VERDICT ---------- */
+  .verdict-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,9,8,0.92);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    z-index:50;
+  }
+  .verdict-overlay.show{display:flex;}
+  .verdict-card{
+    max-width:520px;
+    width:100%;
+    background:var(--ink-soft);
+    border:1px solid var(--stone-dim);
+    border-radius:6px;
+    padding:32px;
+    text-align:center;
+    max-height:90vh;
+    overflow-y:auto;
+  }
+  .verdict-card .verdict-eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--stone);
+    margin-bottom:10px;
+  }
+  .verdict-card h2{
+    font-family:var(--font-display);
+    font-size:clamp(22px,4vw,30px);
+    margin:0 0 16px;
+  }
+  .verdict-card .verdict-truth{
+    font-size:13px;
+    color:var(--parchment-dim);
+    margin-bottom:18px;
+    line-height:1.5;
+  }
+  .verdict-card .verdict-comment{
+    font-family:var(--font-mono);
+    font-size:13px;
+    line-height:1.6;
+    color:var(--duel-green);
+    padding:14px;
+    border:1px solid var(--duel-green-dim);
+    border-radius:4px;
+    background:rgba(60,110,92,0.1);
+    margin-bottom:22px;
+    white-space:pre-wrap;
+    text-align:left;
+  }
+  .verdict-card .verdict-comment.bad{
+    color:var(--oxide);
+    border-color:var(--oxide-dim);
+    background:rgba(196,64,43,0.1);
+  }
+  .verdict-card .verdict-stats{
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--stone);
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .verdict-actions{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- ================= SCREEN 0: MAIN CHOICE ================= -->
+<div class="screen active" id="screen-main-choice">
+  <div class="topbar">
+    <div class="brand">Комната №9</div>
+    <a href="settings.html" class="settings-link">⚙ Настройки ИИ</a>
+  </div>
+  <div class="setup-wrap">
+    <div class="eyebrow">Новое дело</div>
+    <h1>Как играем?</h1>
+    <p class="lede">Против ИИ — быстрый матч в одиночку. Онлайн-комната — играете с другом: заходите в одну и ту же комнату из девяти, и как только там окажутся двое, роли распределятся случайно и матч начнётся сам.</p>
+
+    <div class="section-label">Выбери формат</div>
+    <div class="mode-row" id="top-mode-row">
+      <button class="mode-btn" data-topmode="ai">
+        <div class="mode-title">Матч против ИИ</div>
+        <div class="mode-hint">Настроишь роль, сложность и длину реплик ИИ перед началом</div>
+      </button>
+      <button class="mode-btn" data-topmode="online">
+        <div class="mode-title">Онлайн-комната с другом</div>
+        <div class="mode-hint">Заходите в одну комнату из 9 — подключение и роли автоматические</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN 1: SETUP (AI local hotseat/legacy room flavor pick) ================= -->
+<div class="screen" id="screen-setup">
+  <div class="topbar">
+    <div class="brand">Комната №9</div>
+    <a href="settings.html" class="settings-link">⚙ Настройки ИИ</a>
+  </div>
+  <div class="setup-wrap">
+    <div class="eyebrow">Новое дело · Против ИИ</div>
+    <h1>Выбери комнату допроса</h1>
+    <p class="lede">Комната — это только антураж. Дело, орудие и виновность каждый раз придумываются заново и на исход не влияют.</p>
+
+    <div class="section-label">01 · Комната</div>
+    <div class="room-grid" id="room-grid"></div>
+
+    <div class="setup-footer">
+      <button class="btn-primary" id="btn-start-to-ai-config">Далее — настройки ИИ</button>
+      <span class="setup-warning" id="setup-warning"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN 1B: AI PRE-MATCH CONFIG ================= -->
+<div class="screen" id="screen-ai-config">
+  <div class="topbar">
+    <div class="brand">Комната №9</div>
+    <a href="settings.html" class="settings-link">⚙ Настройки ИИ</a>
+  </div>
+  <div class="setup-wrap">
+    <div class="eyebrow">Новое дело · Против ИИ</div>
+    <h1>Настрой матч</h1>
+    <p class="lede">Роль, сложность ИИ и длина его реплик — только для этого матча. Значения по умолчанию берутся из общих настроек ИИ.</p>
+
+    <div class="section-label">01 · Твоя роль</div>
+    <div class="role-row" id="ai-role-row">
+      <button class="role-btn" data-role="interrogator" type="button">
+        <div class="role-title">Я допрашиваю</div>
+        <div class="role-hint">ИИ играет подозреваемого, ты задаёшь вопросы и решаешь пытать/отпустить/принять капитуляцию</div>
+      </button>
+      <button class="role-btn" data-role="suspect" type="button">
+        <div class="role-title">Меня допрашивают</div>
+        <div class="role-hint">Ты — подозреваемый, ИИ ведёт допрос и сам решает пытать/отпустить</div>
+      </button>
+    </div>
+
+    <div class="section-label">02 · Сложность ИИ</div>
+    <div class="slider-block">
+      <div class="slider-title">Насколько ИИ хорош в своей роли</div>
+      <div class="slider-hint">Не влияет на длину реплик — только на то, как убедительно ИИ скрывает вину или доказывает невиновность.</div>
+      <input type="range" id="cfg-difficulty" min="0" max="100" step="1">
+      <div class="slider-labels">
+        <span>Легко раскусить</span>
+        <span class="slider-value" id="cfg-difficulty-value">50</span>
+        <span>Мастер обмана</span>
+      </div>
+    </div>
+
+    <div class="section-label">03 · Длина реплик ИИ</div>
+    <div class="slider-block">
+      <div class="slider-title">Диапазон слов на реплику</div>
+      <div class="slider-hint">Подсказка модели «уложись в столько-то слов». Диапазон 5–30.</div>
+      <div class="range-two">
+        <input type="range" id="cfg-min-words" min="5" max="30" step="1">
+        <span class="slider-value" id="cfg-min-words-value">5</span>
+      </div>
+      <div class="range-two">
+        <input type="range" id="cfg-max-words" min="5" max="30" step="1">
+        <span class="slider-value" id="cfg-max-words-value">30</span>
+      </div>
+      <div class="slider-labels">
+        <span>мин. слов</span>
+        <span>макс. слов</span>
+      </div>
+    </div>
+
+    <div class="setup-footer">
+      <button class="btn-primary" id="btn-start-ai-case">Начать дело</button>
+      <span class="setup-warning" id="ai-config-warning"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN 1C: ONLINE ROOM SELECT ================= -->
+<div class="screen" id="screen-online-setup">
+  <div class="topbar">
+    <div class="brand">Комната №9</div>
+    <a href="settings.html" class="settings-link">⚙ Настройки ИИ</a>
+  </div>
+  <div class="setup-wrap">
+    <div class="eyebrow">Новое дело · Онлайн с другом</div>
+    <h1>Выбери комнату</h1>
+    <p class="lede">Скажи другу зайти в ту же комнату. Как только вас двое — роли (допрашивающий / подозреваемый) распределяются случайно и дело начинается автоматически у обоих.</p>
+
+    <div class="section-label">Комната</div>
+    <div class="room-grid" id="online-room-grid"></div>
+
+    <div class="setup-footer">
+      <span class="setup-warning" id="online-setup-warning"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN 1D: ONLINE WAITING ================= -->
+<div class="screen" id="screen-online-waiting">
+  <div class="loading-wrap">
+    <div class="spinner-big"></div>
+    <div class="loading-title" id="waiting-title">Ждём второго игрока…</div>
+    <div class="loading-sub" id="waiting-sub">Пусть друг зайдёт в ту же комнату</div>
+    <button class="btn-cancel-wait" id="btn-cancel-wait">Выйти из комнаты</button>
+  </div>
+</div>
+
+<!-- ================= SCREEN 2: LOADING ================= -->
+<div class="screen" id="screen-loading">
+  <div class="loading-wrap">
+    <div class="spinner-big"></div>
+    <div class="loading-title" id="loading-title">Рассказчик придумывает дело…</div>
+    <div class="loading-sub" id="loading-sub">Жертва, орудие и правда, которую вы не увидите</div>
+    <div class="loading-err" id="loading-err"></div>
+  </div>
+</div>
+
+<!-- ================= SCREEN 3: GAME ================= -->
+<div class="screen" id="screen-game">
+  <button class="commentary-toggle-desktop" id="btn-toggle-commentary-desktop">Скрыть голоса рефери ◆</button>
+
+  <div class="game-layout" id="game-layout">
+    <div class="commentary-col left" id="col-suspicious">
+      <div class="commentary-header suspicious">
+        <span>◆ Подозрительный голос</span>
+      </div>
+    </div>
+
+    <div class="main-col">
+      <div class="case-bar" id="case-bar">
+        <div class="case-cell">
+          <div class="cc-label">Жертва</div>
+          <div class="cc-value" id="case-victim">—</div>
+        </div>
+        <div class="case-cell">
+          <div class="cc-label">Место</div>
+          <div class="cc-value" id="case-location">—</div>
+        </div>
+        <div class="case-cell">
+          <div class="cc-label">Орудие</div>
+          <div class="cc-value" id="case-weapon">—</div>
+        </div>
+        <div class="case-cell">
+          <div class="cc-label">Возраст / пол</div>
+          <div class="cc-value" id="case-age">—</div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div class="room-tag" id="room-tag-label">—</div>
+        <div class="role-tag" id="role-tag-label">Допрашивающий</div>
+        <div class="hearts" id="hearts-block">
+          <span class="heart-label">Жизни подозреваемого</span>
+          <svg class="heart" id="heart-1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.6 2 5 5.6 5 8 5 9.6 6.4 12 9c2.4-2.6 4-4 6.4-4C22 5 23.6 8.6 22 11.7 19.5 16.4 12 21 12 21z"/></svg>
+          <svg class="heart" id="heart-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.6 2 5 5.6 5 8 5 9.6 6.4 12 9c2.4-2.6 4-4 6.4-4C22 5 23.6 8.6 22 11.7 19.5 16.4 12 21 12 21z"/></svg>
+          <svg class="heart" id="heart-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.6 2 5 5.6 5 8 5 9.6 6.4 12 9c2.4-2.6 4-4 6.4-4C22 5 23.6 8.6 22 11.7 19.5 16.4 12 21 12 21z"/></svg>
+        </div>
+        <div class="timer" id="game-timer">00:00</div>
+      </div>
+
+      <div class="chat-area" id="chat-area"></div>
+
+      <div class="composer">
+        <input type="text" id="chat-input" placeholder="Задай вопрос подозреваемому…" autocomplete="off">
+        <button id="btn-send">Спросить</button>
+      </div>
+
+      <div class="action-bar" id="action-bar">
+        <button class="btn-torture" id="btn-torture">Пытать (снять 1 жизнь)</button>
+        <button class="btn-release" id="btn-release">Отпустить</button>
+        <button class="btn-surrender hidden" id="btn-surrender">Сдаться</button>
+      </div>
+    </div>
+
+    <div class="commentary-col right" id="col-sympathetic">
+      <div class="commentary-header sympathetic">
+        <span>◆ Сочувствующий голос</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="commentary-mobile-tab" id="btn-toggle-commentary-mobile">◆ Показать голоса рефери ◆</button>
+  <div class="commentary-mobile-sheet" id="commentary-mobile-sheet">
+    <div class="sheet-grip" id="sheet-grip" role="button" aria-label="Скрыть голоса рефери" title="Скрыть"></div>
+    <div class="sheet-col">
+      <div class="commentary-header suspicious"><span>◆ Подозрительный голос</span></div>
+      <div id="col-suspicious-mobile"></div>
+    </div>
+    <div class="sheet-col">
+      <div class="commentary-header sympathetic"><span>◆ Сочувствующий голос</span></div>
+      <div id="col-sympathetic-mobile"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= VERDICT OVERLAY ================= -->
+<div class="verdict-overlay" id="verdict-overlay">
+  <div class="verdict-card">
+    <div class="verdict-eyebrow" id="verdict-eyebrow">Дело закрыто</div>
+    <h2 id="verdict-title">—</h2>
+    <div class="verdict-truth" id="verdict-truth"></div>
+    <div class="verdict-stats">
+      <span id="verdict-time">время: —</span>
+      <span id="verdict-hearts-left">жизней осталось: —</span>
+    </div>
+    <div class="verdict-comment" id="verdict-comment">…</div>
+    <div class="verdict-actions">
+      <button class="btn-primary" id="btn-new-case">Новое дело</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
