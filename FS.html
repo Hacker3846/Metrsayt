@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncTxt | Dev-Buffer</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --accent: #58a6ff;
+            --accent-hover: #1f6feb;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --success: #238636;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .title::before {
+            content: "</>";
+            color: var(--accent);
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .status-dot.online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.syncing { background-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+        textarea {
+            width: 100%;
+            height: 60vh;
+            background: #010409;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 15px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        button {
+            background: var(--card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            border-color: var(--text-muted);
+            background: var(--border);
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        button.primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        @media (max-width: 600px) {
+            textarea { height: 50vh; }
+            body { padding: 10px; }
+            .container { padding: 15px; }
+        }
+
+        /* ===== Файлы ===== */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 5px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
+        }
+
+        .dropzone:hover,
+        .dropzone.dragover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(88, 166, 255, 0.06);
+        }
+
+        .dropzone input[type="file"] {
+            display: none;
+        }
+
+        .dropzone .hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            opacity: 0.75;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #010409;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .file-icon {
+            font-family: monospace;
+            font-size: 16px;
+            color: var(--accent);
+            flex-shrink: 0;
+            width: 22px;
+            text-align: center;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .file-name {
+            font-size: 13px;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .file-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .file-actions button.danger:hover {
+            border-color: #f85149;
+            color: #f85149;
+            background: rgba(248, 81, 73, 0.08);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.15s linear;
+        }
+
+        .empty-note {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 6px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 class="title">SyncTxt</h1>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Подключение...</span>
+        </div>
+    </div>
+
+    <textarea id="syncArea" placeholder="Вставь код или текст сюда. Он автоматически появится на других устройствах..."></textarea>
+
+    <div class="controls">
+        <button onclick="clearText()">Очистить</button>
+        <button class="primary" onclick="copyText()" id="copyBtn">Копировать</button>
+    </div>
+
+    <div class="divider">Файлы</div>
+
+    <label class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" multiple>
+        <span id="dropzoneLabel">Перетащи файл сюда или нажми, чтобы выбрать</span>
+        <span class="hint" id="dropzoneHint">Максимум ~7 МБ на файл (ограничение базы данных)</span>
+    </label>
+
+    <div class="file-list" id="fileList">
+        <div class="empty-note" id="emptyNote">Пока нет файлов</div>
+    </div>
+</div>
+
+<script>
+    // Конфигурация Firebase из твоего кода
+    const firebaseConfig = { databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // Создаем отдельную ветку для буфера обмена
+    const textRef = database.ref('shared_buffer/main_text');
+
+    const textarea = document.getElementById('syncArea');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const copyBtn = document.getElementById('copyBtn');
+
+    let isTyping = false;
+    let typingTimer;
+
+    // Слушаем изменения из базы в реальном времени
+    textRef.on('value', (snap) => {
+        statusDot.classList.add('online');
+        statusText.textContent = "Синхронизировано";
+        
+        // Обновляем текст, только если мы сейчас сами его не печатаем
+        if (!isTyping) {
+            const val = snap.val();
+            textarea.value = val || "";
+        }
+    });
+
+    // Отправляем изменения в базу при вводе
+    textarea.addEventListener('input', () => {
+        isTyping = true;
+        statusDot.className = 'status-dot syncing';
+        statusText.textContent = "Сохранение...";
+
+        clearTimeout(typingTimer);
+        
+        // Ждем 500мс после последней нажатой клавиши перед отправкой
+        typingTimer = setTimeout(() => {
+            textRef.set(textarea.value).then(() => {
+                isTyping = false;
+                statusDot.className = 'status-dot online';
+                statusText.textContent = "Синхронизировано";
+            }).catch(err => {
+                statusText.textContent = "Ошибка сохранения";
+                console.error(err);
+            });
+        }, 500);
+    });
+
+    // Очистка БД и поля
+    function clearText() {
+        if(confirm("Точно очистить буфер для всех устройств?")) {
+            textarea.value = "";
+            textRef.set("");
+            textarea.focus();
+        }
+    }
+
+    // Удобное копирование в 1 клик
+    function copyText() {
+        textarea.select();
+        document.execCommand('copy');
+        
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "Скопировано!";
+        copyBtn.style.background = "var(--success)";
+        copyBtn.style.borderColor = "var(--success)";
+        
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.background = "";
+            copyBtn.style.borderColor = "";
+        }, 2000);
+    }
+
+    /* ==================== Передача файлов ==================== */
+    // Файлы хранятся как base64-строка прямо в Realtime Database (без Firebase
+    // Storage, т.к. в конфиге не указан storageBucket). Это удобно "из коробки",
+    // но у самой Realtime Database есть жёсткий лимит: одна строка в базе не
+    // может превышать 10 МБ. Base64 увеличивает размер файла примерно на треть,
+    // поэтому реальный файл должен быть не больше ~7 МБ — это ограничение
+    // Firebase, а не настройка, которую можно просто "поднять".
+    const MAX_FILE_SIZE = 7 * 1024 * 1024; // ~7 МБ — реальный физический потолок для base64 в RTDB
+    const filesRef = database.ref('shared_buffer/files');
+
+    const dropzone = document.getElementById('dropzone');
+    const dropzoneLabel = document.getElementById('dropzoneLabel');
+    const dropzoneHint = document.getElementById('dropzoneHint');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const emptyNote = document.getElementById('emptyNote');
+
+    // На тачскринах drag&drop ненадёжен (часто вместо него срабатывает скролл
+    // или выделение текста) — там оставляем только тап -> открытие выбора файла
+    // и меняем подсказку, чтобы не обещать перетаскивание.
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+        dropzoneLabel.textContent = 'Нажми, чтобы выбрать файл';
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' Б';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+    }
+
+    function fileExt(name) {
+        const parts = name.split('.');
+        return parts.length > 1 ? parts.pop().toUpperCase() : '?';
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result); // data:<mime>;base64,<...>
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleFiles(fileArray) {
+        for (const file of fileArray) {
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`Файл "${file.name}" слишком большой (${formatSize(file.size)}).\nМаксимум ~${formatSize(MAX_FILE_SIZE)} — это ограничение базы данных Firebase, а не настройка сайта.`);
+                continue;
+            }
+            uploadFile(file);
+        }
+    }
+
+    async function uploadFile(file) {
+        const newRef = filesRef.push();
+        const rowEl = renderUploadingRow(newRef.key, file);
+
+        try {
+            const dataUrl = await fileToBase64(file);
+            await newRef.set({
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                size: file.size,
+                data: dataUrl,
+                uploadedAt: Date.now()
+            });
+            // rowEl удалится/обновится сам через слушатель 'value' ниже
+        } catch (err) {
+            console.error(err);
+            if (rowEl) {
+                const meta = rowEl.querySelector('.file-meta');
+                if (meta) meta.textContent = 'Ошибка загрузки';
+            }
+        }
+    }
+
+    function renderUploadingRow(key, file) {
+        emptyNote.style.display = 'none';
+        const row = document.createElement('div');
+        row.className = 'file-item';
+        row.id = 'uploading-' + key;
+        row.innerHTML = `
+            <div class="file-icon">${fileExt(file.name)}</div>
+            <div class="file-info">
+                <div class="file-name">${escapeHtml(file.name)}</div>
+                <div class="file-meta">Загрузка... ${formatSize(file.size)}</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 40%"></div></div>
+            </div>
+        `;
+        fileList.appendChild(row);
+        return row;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function renderFileList(filesObj) {
+        // Убираем все элементы кроме "заглушки" пустого списка
+        fileList.querySelectorAll('.file-item').forEach(el => el.remove());
+
+        const entries = filesObj ? Object.entries(filesObj) : [];
+        if (entries.length === 0) {
+            emptyNote.style.display = 'block';
+            return;
+        }
+        emptyNote.style.display = 'none';
+
+        entries
+            .sort((a, b) => (b[1].uploadedAt || 0) - (a[1].uploadedAt || 0))
+            .forEach(([key, meta]) => {
+                const row = document.createElement('div');
+                row.className = 'file-item';
+                row.innerHTML = `
+                    <div class="file-icon">${fileExt(meta.name || '')}</div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(meta.name || 'файл')}</div>
+                        <div class="file-meta">${formatSize(meta.size || 0)}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button type="button" data-action="download">Скачать</button>
+                        <button type="button" class="danger" data-action="delete">Удалить</button>
+                    </div>
+                `;
+                row.querySelector('[data-action="download"]').addEventListener('click', () => downloadFile(key));
+                row.querySelector('[data-action="delete"]').addEventListener('click', () => deleteFile(key, meta.name));
+                fileList.appendChild(row);
+            });
+    }
+
+    async function downloadFile(key) {
+        try {
+            const snap = await filesRef.child(key).once('value');
+            const meta = snap.val();
+            if (!meta || !meta.data) return;
+            const a = document.createElement('a');
+            a.href = meta.data;
+            a.download = meta.name || 'file';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (err) {
+            console.error(err);
+            alert('Не удалось скачать файл');
+        }
+    }
+
+    function deleteFile(key, name) {
+        if (confirm(`Удалить файл "${name}" для всех устройств?`)) {
+            filesRef.child(key).remove();
+        }
+    }
+
+    // Слушаем список файлов в реальном времени
+    filesRef.on('value', (snap) => {
+        renderFileList(snap.val());
+    });
+
+    // Клик по dropzone открывает выбор файла
+    dropzone.addEventListener('click', (e) => {
+        // избегаем двойного срабатывания, когда клик уже пришёл от label->input
+        if (e.target !== fileInput) fileInput.click();
+    });
+
+    fileInput.addEventListener('click', (e) => e.stopPropagation());
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+            handleFiles(Array.from(fileInput.files));
+            fileInput.value = '';
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length) {
+            handleFiles(Array.from(dt.files));
+        }
+    });
+</script>
+
+</body>
+</html>
