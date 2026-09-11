@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Лавка</title>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --paper:#f6f1e6;
+    --card:#fffcf5;
+    --ink:#2b2620;
+    --ink-soft:#8a7f6d;
+    --line:#dcd0b8;
+    --tomato:#c1502e;
+    --tomato-deep:#9c3d21;
+    --olive:#5c7a4f;
+    --olive-deep:#42593a;
+    --gold:#8a6d1f;
+    --alert:#a6321c;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{ height:100%; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+
+  ::selection{ background:var(--tomato); color:#fff; }
+
+  /* ---------- header ---------- */
+  header{
+    background:var(--ink);
+    color:var(--paper);
+    padding:16px 18px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-shrink:0;
+  }
+  .brand{
+    font-family:'Fraunces',serif;
+    font-size:21px;
+    font-weight:600;
+  }
+  .sync{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11.5px;
+    color:#b9b1a0;
+  }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background:#665c4d; }
+  .sync-dot.on{ background:var(--olive); }
+
+  /* ---------- main scroll area ---------- */
+  main{
+    flex:1;
+    overflow-y:auto;
+    padding:18px 16px 100px;
+  }
+  .page{ display:none; max-width:520px; margin:0 auto; }
+  .page.active{ display:block; }
+
+  h1.page-title{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:600;
+    margin:0 0 14px;
+  }
+
+  /* ---------- cash page ---------- */
+  .cash-hero{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:24px 20px;
+    text-align:center;
+    margin-bottom:14px;
+  }
+  /* ---------- voice notes ---------- */
+  :root{ --press-blue:#2f5fa3; --press-blue-deep:#244a80; }
+  .voice-note{
+    background:var(--ink);
+    border-radius:16px;
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .voice-note.small{
+    padding:10px 14px;
+    border-radius:12px;
+    margin-bottom:12px;
+    background:var(--card);
+    border:1px solid var(--line);
+  }
+  .voice-note-label{
+    flex:1;
+    min-width:0;
+    font-size:12.5px;
+    color:#b9b1a0;
+  }
+  .voice-note.small .voice-note-label{ color:var(--ink-soft); }
+  .voice-note-label .rec-state{
+    display:block;
+    font-size:11px;
+    margin-top:2px;
+    color:#8f8676;
+  }
+  .voice-note.small .voice-note-label .rec-state{ color:var(--ink-soft); }
+  .voice-note-btns{ display:flex; gap:8px; flex-shrink:0; }
+  .press-btn{
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    color:#fff;
+    background:var(--press-blue);
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    letter-spacing:0.02em;
+    flex-shrink:0;
+  }
+  .press-btn:active{ background:var(--press-blue-deep); }
+  .press-btn:disabled{ background:#7d8c9e; opacity:0.55; cursor:default; }
+
+  .voice-note-big .press-btn{ padding:16px 22px; font-size:16px; border-radius:14px; }
+  .voice-note.small .press-btn{ padding:10px 16px; font-size:13px; }
+
+  .order-section-label.with-voice{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .cash-hero-label{ font-size:13px; color:var(--ink-soft); margin-bottom:6px; }
+  .cash-hero-value{
+    font-family:'Fraunces',serif;
+    font-size:42px;
+    font-weight:700;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    line-height:1.1;
+  }
+
+  .cash-notes-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:22px 0 10px 2px;
+  }
+  .cash-note-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .cash-note-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:2px;
+  }
+  .cash-note-name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16px;
+  }
+  .cash-note-del{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:17px;
+    cursor:pointer;
+    padding:2px 4px;
+    line-height:1;
+    flex-shrink:0;
+  }
+  .cash-note-del:active{ color:var(--alert); }
+  .cash-note-time{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .cash-note-text{
+    white-space:pre-wrap;
+    font-size:14px;
+    line-height:1.5;
+    color:var(--ink);
+  }
+
+  .big-input-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .big-input-row input{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px 14px;
+    font-size:20px;
+    font-family:'Inter',sans-serif;
+    font-variant-numeric:tabular-nums;
+    background:var(--card);
+    color:var(--ink);
+    min-width:0;
+  }
+  .big-input-row input:focus{ outline:2px solid var(--tomato); outline-offset:1px; }
+
+  .big-btn-row{
+    display:flex;
+    gap:10px;
+  }
+  .big-btn{
+    flex:1;
+    border:none;
+    border-radius:12px;
+    padding:16px 10px;
+    font-size:16px;
+    font-weight:700;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    color:#fff;
+  }
+  .big-btn.plus{ background:var(--olive); }
+  .big-btn.plus:active{ background:var(--olive-deep); }
+  .big-btn.minus{ background:var(--tomato); }
+  .big-btn.minus:active{ background:var(--tomato-deep); }
+
+  /* ---------- stock page ---------- */
+  .stock-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .stock-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:2px;
+    gap:8px;
+  }
+  .stock-name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:17px;
+  }
+  .stock-top-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .stock-price{
+    font-size:13px;
+    color:var(--gold);
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .stock-del-btn{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:17px;
+    cursor:pointer;
+    padding:2px 4px;
+    line-height:1;
+  }
+  .stock-del-btn:active{ color:var(--alert); }
+  .stock-qty-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:10px;
+    gap:10px;
+  }
+  .stock-qty-wrap{
+    display:flex;
+    align-items:baseline;
+    gap:2px;
+  }
+  .stock-qty{
+    font-family:'Fraunces',serif;
+    font-size:24px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    border:none;
+    background:none;
+    color:var(--ink);
+    width:64px;
+    padding:0;
+    -moz-appearance:textfield;
+  }
+  .stock-qty::-webkit-outer-spin-button,
+  .stock-qty::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .stock-qty:focus{ outline:none; border-bottom:2px solid var(--tomato); }
+  .stock-qty.low{ color:var(--alert); }
+  .stock-qty-unit{ font-size:13px; color:var(--ink-soft); font-weight:400; }
+  .stock-btns{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .stock-btn{
+    height:40px;
+    min-width:40px;
+    border-radius:9px;
+    border:none;
+    font-size:16px;
+    font-weight:700;
+    color:#fff;
+    cursor:pointer;
+    padding:0 8px;
+  }
+  .stock-btn.big{ font-size:20px; width:40px; padding:0; }
+  .stock-btn.plus{ background:var(--olive); }
+  .stock-btn.plus:active{ background:var(--olive-deep); }
+  .stock-btn.minus{ background:var(--tomato); }
+  .stock-btn.minus:active{ background:var(--tomato-deep); }
+
+  .stock-toggle{
+    margin-top:10px;
+    padding-top:8px;
+    border-top:1px dashed var(--line);
+  }
+  .stock-toggle summary{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .stock-toggle summary::-webkit-details-marker{ display:none; }
+  .stock-toggle summary::before{ content:"▸"; font-size:10px; }
+  .stock-toggle[open] summary::before{ content:"▾"; }
+  .batch-line{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    padding:5px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .batch-line:last-child{ border-bottom:none; }
+  .batch-line b{ color:var(--ink); font-weight:600; }
+
+  .add-new-block{
+    background:var(--card);
+    border:1px dashed var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-top:16px;
+  }
+  .add-new-block .label{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  .add-new-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .add-new-row input{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 10px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    background:#fff;
+    min-width:0;
+  }
+  .add-new-row input.name{ flex:1.4; }
+  .add-new-row input.num{ flex:1; }
+  .add-new-block .full-btn{
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-size:15px;
+    font-weight:700;
+    background:var(--tomato);
+    color:#fff;
+    cursor:pointer;
+  }
+  .add-new-block .full-btn:active{ background:var(--tomato-deep); }
+
+  .empty-hint{ font-size:13.5px; color:var(--ink-soft); padding:8px 2px 4px; }
+
+  /* ---------- orders page ---------- */
+  .order-form{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:18px;
+  }
+  .order-form .label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 6px 2px;
+  }
+  .order-form input, .order-form textarea{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 12px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    background:#fff;
+    margin-bottom:12px;
+  }
+  .order-form textarea{ min-height:70px; resize:vertical; }
+  .order-form .full-btn{
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding:14px;
+    font-size:15.5px;
+    font-weight:700;
+    background:var(--tomato);
+    color:#fff;
+    cursor:pointer;
+  }
+  .order-form .full-btn:active{ background:var(--tomato-deep); }
+
+  .cart-pick-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .cart-pick-row select{
+    flex:1.6;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 10px;
+    font-size:14.5px;
+    font-family:'Inter',sans-serif;
+    background:#fff;
+    min-width:0;
+  }
+  .cart-qty-stepper{
+    display:flex;
+    align-items:center;
+    gap:0;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .cart-qty-btn{
+    width:36px;
+    height:44px;
+    border:none;
+    background:none;
+    color:var(--ink);
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .cart-qty-btn:active{ background:var(--line); }
+  .cart-qty-value{
+    min-width:28px;
+    text-align:center;
+    font-size:14.5px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    font-family:'Inter',sans-serif;
+  }
+  .cart-add-btn{
+    width:46px;
+    border:none;
+    border-radius:10px;
+    background:var(--olive);
+    color:#fff;
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .cart-add-btn:active{ background:var(--olive-deep); }
+
+  .cart-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 2px;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .cart-line:last-child{ border-bottom:none; }
+  .cart-line-text b{ font-weight:600; }
+  .cart-line-del{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:18px;
+    cursor:pointer;
+    padding:2px 6px;
+  }
+  #cartList{ margin-bottom:6px; }
+  #cartEmpty{ margin-bottom:12px; }
+
+  .order-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .order-card.inactive{
+    opacity:0.55;
+  }
+  .order-name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16.5px;
+    margin-bottom:2px;
+  }
+  .order-card.inactive .order-name{ text-decoration:line-through; }
+  .order-dates{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .order-note{
+    white-space:pre-wrap;
+    font-size:14px;
+    line-height:1.5;
+    color:var(--ink);
+    margin-bottom:12px;
+  }
+  .order-history{
+    margin:0 0 12px;
+  }
+  .order-history summary{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-bottom:6px;
+  }
+  .order-history summary::-webkit-details-marker{ display:none; }
+  .order-history summary::before{ content:"▸"; font-size:10px; }
+  .order-history[open] summary::before{ content:"▾"; }
+  .order-history-line{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    font-size:13px;
+    padding:6px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .order-history-line:last-child{ border-bottom:none; }
+  .order-history-time{
+    font-size:11px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .order-section-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:22px 0 10px 2px;
+    padding-top:6px;
+    border-top:1px solid var(--line);
+  }
+  .order-btns{ display:flex; gap:8px; }
+  .order-btn{
+    flex:1;
+    border:none;
+    border-radius:9px;
+    padding:11px;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .order-btn.done{ background:var(--olive); color:#fff; }
+  .order-btn.done:active{ background:var(--olive-deep); }
+  .order-btn.del{ background:transparent; color:var(--ink-soft); border:1px solid var(--line); }
+  .order-btn.del:active{ background:var(--line); }
+
+  /* ---------- tab bar ---------- */
+  nav.tabbar{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:var(--card);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 16px rgba(43,38,32,0.08);
+  }
+  .tab-btn{
+    flex:1;
+    background:none;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    padding:8px 4px 6px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    border-radius:10px;
+  }
+  .tab-btn .tab-icon{ font-size:20px; line-height:1; }
+  .tab-btn .tab-label{ font-size:11px; font-weight:600; }
+  .tab-btn.active{ color:var(--tomato); background:#f3e0d8; }
+
+  .toast{
+    position:fixed;
+    bottom:78px;
+    left:50%;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--ink);
+    color:var(--paper);
+    padding:11px 18px;
+    border-radius:9px;
+    font-size:13.5px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:100;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Лавка</div>
+  <div class="sync">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncText">подключение…</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- КАССА -->
+  <section class="page active" id="page-cash">
+    <h1 class="page-title">Касса</h1>
+
+    <div class="voice-note voice-note-big" id="voiceNote-cashMain">
+      <div class="voice-note-label">гс заметка · касса<span class="rec-state" id="voiceState-cashMain"></span></div>
+      <div class="voice-note-btns">
+        <button class="press-btn" id="voicePlayBtn-cashMain" onclick="playVoiceNote('cashMain')" disabled>НАЖМИ#1</button>
+      </div>
+    </div>
+
+    <div class="cash-hero">
+      <div class="cash-hero-label">сейчас в кассе</div>
+      <div class="cash-hero-value" id="cashValue">0 ₽</div>
+    </div>
+
+    <div class="voice-note small" id="voiceNote-cashInput">
+      <div class="voice-note-label">гс заметка<span class="rec-state" id="voiceState-cashInput"></span></div>
+      <div class="voice-note-btns">
+        <button class="press-btn" id="voicePlayBtn-cashInput" onclick="playVoiceNote('cashInput')" disabled>НАЖМИ#2</button>
+      </div>
+    </div>
+
+    <div class="big-input-row">
+      <input type="number" id="cashInput" placeholder="сумма, ₽" inputmode="numeric">
+    </div>
+    <div class="big-btn-row">
+      <button class="big-btn plus" onclick="adjustCash(1)">+ добавить</button>
+      <button class="big-btn minus" onclick="adjustCash(-1)">− убавить</button>
+    </div>
+
+    <div id="cashNotesWrap" style="display:none;">
+      <div class="cash-notes-label">заметки о деактивации</div>
+      <div id="cashNotesList"></div>
+    </div>
+  </section>
+
+  <!-- СКЛАД -->
+  <section class="page" id="page-stock">
+    <h1 class="page-title">Склад</h1>
+
+    <div class="voice-note small" id="voiceNote-stockTop">
+      <div class="voice-note-label">гс заметка · склад<span class="rec-state" id="voiceState-stockTop"></span></div>
+      <div class="voice-note-btns">
+        <button class="press-btn" id="voicePlayBtn-stockTop" onclick="playVoiceNote('stockTop')" disabled>НАЖМИ#3</button>
+      </div>
+    </div>
+
+    <div id="stockList"></div>
+    <div class="empty-hint" id="stockEmpty">Пока нет товаров.</div>
+
+    <div class="voice-note small" id="voiceNote-stockMid">
+      <div class="voice-note-label">гс заметка<span class="rec-state" id="voiceState-stockMid"></span></div>
+      <div class="voice-note-btns">
+        <button class="press-btn" id="voicePlayBtn-stockMid" onclick="playVoiceNote('stockMid')" disabled>НАЖМИ#4</button>
+      </div>
+    </div>
+
+    <div class="add-new-block">
+      <div class="label">добавить новый товар</div>
+      <div class="add-new-row">
+        <input type="text" class="name" id="newGoodName" placeholder="название">
+      </div>
+      <div class="add-new-row">
+        <input type="number" class="num" id="newGoodPrice" placeholder="цена ₽" inputmode="numeric">
+        <input type="number" class="num" id="newGoodQty" placeholder="кол-во" inputmode="numeric">
+      </div>
+      <button class="full-btn" onclick="addGood()">Добавить на склад</button>
+    </div>
+  </section>
+
+  <!-- ЗАКАЗЫ -->
+  <section class="page" id="page-orders">
+    <h1 class="page-title">Заказы</h1>
+
+    <div class="voice-note small" id="voiceNote-ordersTop">
+      <div class="voice-note-label">гс заметка · заказы<span class="rec-state" id="voiceState-ordersTop"></span></div>
+      <div class="voice-note-btns">
+        <button class="press-btn" id="voicePlayBtn-ordersTop" onclick="playVoiceNote('ordersTop')" disabled>НАЖМИ#5</button>
+      </div>
+    </div>
+
+    <div class="order-form">
+      <div class="label">имя клиента</div>
+      <input type="text" id="orderName" placeholder="напр. Настя">
+
+      <div class="label">добавить товар со склада</div>
+      <div class="cart-pick-row">
+        <select id="cartGoodSelect"></select>
+        <div class="cart-qty-stepper">
+          <button type="button" class="cart-qty-btn" onclick="stepCartQty(-1)">−</button>
+          <span class="cart-qty-value" id="cartGoodQty">1</span>
+          <button type="button" class="cart-qty-btn" onclick="stepCartQty(1)">+</button>
+        </div>
+        <button class="cart-add-btn" onclick="addToCart()">+</button>
+      </div>
+
+      <div id="cartList"></div>
+      <div class="empty-hint" id="cartEmpty">Корзина пуста — добавь товары выше.</div>
+
+      <button class="full-btn" onclick="addOrder()">Записать заказ</button>
+    </div>
+
+    <div id="ordersList"></div>
+    <div class="empty-hint" id="ordersEmpty">Пока нет заказов.</div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-page="cash" onclick="showPage('cash')">
+    <span class="tab-icon">💰</span>
+    <span class="tab-label">Касса</span>
+  </button>
+  <button class="tab-btn" data-page="stock" onclick="showPage('stock')">
+    <span class="tab-icon">📦</span>
+    <span class="tab-label">Склад</span>
+  </button>
+  <button class="tab-btn" data-page="orders" onclick="showPage('orders')">
+    <span class="tab-icon">📝</span>
+    <span class="tab-label">Заказы</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const firebaseConfig = { databaseURL: "https://messengerb-dcc80-default-rtdb.europe-west1.firebasedatabase.app" };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const goodsRef  = db.ref('lavka/goods');
+const cashRef   = db.ref('lavka/cash');
+const ordersRef = db.ref('lavka/holds'); // та же ветка "отложено/заказы"
+const deactNotesRef = db.ref('lavka/deactivationNotes');
+const voiceNotesRef = db.ref('lavka/voiceNotes');
+
+const syncDot = document.getElementById('syncDot');
+const syncText = document.getElementById('syncText');
+
+let goods = {};
+let cash = { total:0, debt:0 };
+let orders = {};
+let deactNotes = {};
+let voiceNotes = {}; // { slotId: { audio: base64 dataURL, ts, label } }
+let cart = []; // временная корзина для текущего заказа: [{goodId, goodName, qty}]
+
+function markOnline(){
+  syncDot.classList.add('on');
+  syncText.textContent = 'синхронизировано';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=> t.classList.remove('show'), 1700);
+}
+
+function money(n){ return (Number(n)||0).toLocaleString('ru-RU') + ' ₽'; }
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------------- VOICE NOTES (гс заметки) ---------------- */
+// заметки записаны заранее (инструкции); в интерфейсе доступно только воспроизведение
+
+voiceNotesRef.on('value', snap=>{
+  markOnline();
+  voiceNotes = snap.val() || {};
+  ['cashMain','cashInput','stockTop','stockMid','ordersTop','ordersMid'].forEach(refreshVoiceNoteUI);
+});
+
+function refreshVoiceNoteUI(slotId){
+  const playBtn = document.getElementById('voicePlayBtn-'+slotId);
+  const stateEl = document.getElementById('voiceState-'+slotId);
+  if(!playBtn) return; // виджет сейчас не в DOM (напр. другая вкладка ещё не рендерилась)
+  const note = voiceNotes[slotId];
+  playBtn.disabled = !note;
+  if(stateEl){
+    stateEl.textContent = note ? '' : 'пока пусто';
+  }
+}
+
+function playVoiceNote(slotId){
+  const note = voiceNotes[slotId];
+  if(!note || !note.audio) return;
+  const audio = new Audio(note.audio);
+  audio.play().catch(()=> showToast('Не удалось воспроизвести'));
+}
+
+/* ---------------- TABS ---------------- */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-page="${name}"]`).classList.add('active');
+  document.querySelector('main').scrollTop = 0;
+}
+
+/* ---------------- CASH ---------------- */
+cashRef.on('value', snap=>{
+  markOnline();
+  cash = snap.val() || { total:0, debt:0 };
+  document.getElementById('cashValue').textContent = money(cash.total);
+});
+
+function adjustCash(sign){
+  const input = document.getElementById('cashInput');
+  const val = Number(input.value);
+  if(!val){ showToast('Введи сумму'); return; }
+  cashRef.child('total').set((cash.total||0) + sign*val);
+  input.value = '';
+  showToast(sign>0? 'Добавлено в кассу' : 'Списано из кассы');
+}
+
+/* ---------------- DEACTIVATION NOTES (на кассе) ---------------- */
+deactNotesRef.on('value', snap=>{
+  markOnline();
+  deactNotes = snap.val() || {};
+  renderCashNotes();
+});
+
+function renderCashNotes(){
+  const wrap = document.getElementById('cashNotesWrap');
+  const list = document.getElementById('cashNotesList');
+  const ids = Object.keys(deactNotes).sort((a,b)=>(deactNotes[b].ts||0)-(deactNotes[a].ts||0));
+
+  wrap.style.display = ids.length ? 'block' : 'none';
+  list.innerHTML = ids.map(id=>{
+    const n = deactNotes[id];
+    return `
+      <div class="cash-note-card">
+        <div class="cash-note-top">
+          <div class="cash-note-name">${escapeHtml(n.name||'')}</div>
+          <button class="cash-note-del" onclick="deleteCashNote('${id}')" title="удалить заметку">✕</button>
+        </div>
+        <div class="cash-note-time">${n.label||''}</div>
+        <div class="cash-note-text">${escapeHtml(n.text||'')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteCashNote(id){
+  if(!confirm('Удалить заметку совсем?')) return;
+  deactNotesRef.child(id).remove();
+}
+
+/* ---------------- STOCK ---------------- */
+goodsRef.on('value', snap=>{
+  markOnline();
+  goods = snap.val() || {};
+  renderStock();
+  renderCartGoodSelect();
+});
+
+function renderStock(){
+  const list = document.getElementById('stockList');
+  const ids = Object.keys(goods);
+  document.getElementById('stockEmpty').style.display = ids.length? 'none':'block';
+  list.innerHTML = '';
+
+  ids.forEach(id=>{
+    const g = goods[id];
+    const low = Number(g.qty) <= 3;
+    const batches = g.batches ? Object.values(g.batches).sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
+
+    const card = document.createElement('div');
+    card.className = 'stock-card';
+    card.innerHTML = `
+      <div class="stock-top">
+        <div class="stock-name">${escapeHtml(g.name)}</div>
+        <div class="stock-top-right">
+          <div class="stock-price">${money(g.price)}</div>
+          <button class="stock-del-btn" onclick="deleteGood('${id}')" title="удалить товар">✕</button>
+        </div>
+      </div>
+      <div class="stock-qty-row">
+        <div class="stock-qty-wrap">
+          <input type="number" class="stock-qty ${low?'low':''}" id="qty-${id}" value="${g.qty}"
+                 onchange="setStockExact('${id}', this.value)">
+          <span class="stock-qty-unit">шт</span>
+        </div>
+        <div class="stock-btns">
+          <button class="stock-btn minus big" onclick="changeStock('${id}',-1)">−</button>
+          <button class="stock-btn plus big" onclick="changeStock('${id}',1)">+</button>
+        </div>
+      </div>
+      ${batches.length ? `
+        <details class="stock-toggle">
+          <summary>партии (${batches.length})</summary>
+          ${batches.map(b=>`
+            <div class="batch-line">
+              <span>${b.delta>0? '+':''}${b.delta} шт</span>
+              <b>${b.label||''}</b>
+            </div>
+          `).join('')}
+        </details>
+      ` : ''}
+    `;
+    list.appendChild(card);
+  });
+}
+
+function nowLabel(){
+  const d = new Date();
+  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+}
+
+const MERGE_WINDOW_MS = 10 * 60 * 1000; // 10 минут
+
+function logBatch(id, delta){
+  const g = goods[id];
+  const batches = g.batches ? Object.entries(g.batches) : [];
+  // ищем последнюю по времени партию этого товара
+  let lastId = null, lastBatch = null;
+  batches.forEach(([bid, b])=>{
+    if(!lastBatch || (b.ts||0) > (lastBatch.ts||0)){ lastId = bid; lastBatch = b; }
+  });
+
+  const now = Date.now();
+  if(lastBatch && (now - (lastBatch.ts||0)) <= MERGE_WINDOW_MS){
+    // объединяем с последней записью, но дату/время оставляем от исходной (более старой) партии
+    const mergedDelta = (lastBatch.delta||0) + delta;
+    db.ref('lavka/goods/'+id+'/batches/'+lastId).set({ delta: mergedDelta, ts: lastBatch.ts, label: lastBatch.label });
+  } else {
+    const bid = db.ref('lavka/goods/'+id+'/batches').push().key;
+    db.ref('lavka/goods/'+id+'/batches/'+bid).set({ delta, ts: now, label: nowLabel() });
+  }
+}
+
+function changeStock(id, delta){
+  const g = goods[id];
+  const newQty = Math.max(0, (Number(g.qty)||0) + delta);
+  db.ref('lavka/goods/'+id+'/qty').set(newQty);
+  logBatch(id, delta);
+}
+
+function setStockExact(id, rawVal){
+  const g = goods[id];
+  const newQty = Math.max(0, Math.round(Number(rawVal))||0);
+  const delta = newQty - (Number(g.qty)||0);
+  db.ref('lavka/goods/'+id+'/qty').set(newQty);
+  if(delta !== 0) logBatch(id, delta);
+  showToast('Количество обновлено');
+}
+
+function addGood(){
+  const nameInput = document.getElementById('newGoodName');
+  const priceInput = document.getElementById('newGoodPrice');
+  const qtyInput = document.getElementById('newGoodQty');
+  const name = nameInput.value.trim();
+  const price = Number(priceInput.value);
+  const qty = Number(qtyInput.value);
+  if(!name || !price || !qty){ showToast('Заполни всё: название, цену, количество'); return; }
+
+  // если товар с таким именем уже есть — прибавляем к нему, а не создаём новый
+  const existingId = Object.keys(goods).find(gid =>
+    (goods[gid].name||'').trim().toLowerCase() === name.toLowerCase()
+  );
+
+  if(existingId){
+    const g = goods[existingId];
+    const newQty = (Number(g.qty)||0) + qty;
+    db.ref('lavka/goods/'+existingId+'/qty').set(newQty);
+    db.ref('lavka/goods/'+existingId+'/price').set(price); // обновим цену на случай, если изменилась
+    logBatch(existingId, qty);
+    showToast('Партия добавлена к «' + name + '»');
+  } else {
+    const id = goodsRef.push().key;
+    db.ref('lavka/goods/'+id).set({ name, price, qty });
+    logBatch(id, qty);
+    showToast('Товар добавлен');
+  }
+
+  nameInput.value=''; priceInput.value=''; qtyInput.value='';
+}
+
+function deleteGood(id){
+  const g = goods[id];
+  if(!confirm(`Удалить «${g.name}» со склада совсем? Это нельзя отменить.`)) return;
+  db.ref('lavka/goods/'+id).remove();
+  showToast('Товар удалён');
+}
+
+/* ---------------- ORDERS ---------------- */
+ordersRef.on('value', snap=>{
+  markOnline();
+  orders = snap.val() || {};
+  renderOrders();
+});
+
+function renderCartGoodSelect(){
+  const sel = document.getElementById('cartGoodSelect');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">товар со склада</option>';
+  Object.entries(goods).forEach(([id,g])=>{
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${g.name} (${g.qty} шт)`;
+    sel.appendChild(opt);
+  });
+  if(prev) sel.value = prev;
+}
+
+function renderCart(){
+  const list = document.getElementById('cartList');
+  document.getElementById('cartEmpty').style.display = cart.length? 'none':'block';
+  list.innerHTML = cart.map((item, i) => `
+    <div class="cart-line">
+      <div class="cart-line-text"><b>${escapeHtml(item.goodName)}</b> × ${item.qty}</div>
+      <button class="cart-line-del" onclick="removeFromCart(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+let cartQty = 1;
+
+function stepCartQty(delta){
+  cartQty = Math.max(1, cartQty + delta);
+  document.getElementById('cartGoodQty').textContent = cartQty;
+}
+
+function addToCart(){
+  const sel = document.getElementById('cartGoodSelect');
+  const goodId = sel.value;
+  const qty = cartQty;
+  if(!goodId || !qty){ showToast('Выбери товар'); return; }
+  const g = goods[goodId];
+
+  const existing = cart.find(c => c.goodId === goodId);
+  if(existing){ existing.qty += qty; }
+  else { cart.push({ goodId, goodName: g.name, qty }); }
+
+  cartQty = 1;
+  document.getElementById('cartGoodQty').textContent = cartQty;
+  renderCart();
+}
+
+function removeFromCart(index){
+  cart.splice(index, 1);
+  renderCart();
+}
+
+function cartToText(items){
+  return items.map(it => `${it.goodName} × ${it.qty}`).join('\n');
+}
+
+function mergeCartItems(itemsA, itemsB){
+  const merged = itemsA.map(it => ({...it}));
+  itemsB.forEach(b=>{
+    const existing = merged.find(m => m.goodId === b.goodId);
+    if(existing){ existing.qty += b.qty; }
+    else{ merged.push({...b}); }
+  });
+  return merged;
+}
+
+function renderOrders(){
+  const list = document.getElementById('ordersList');
+  const ids = Object.keys(orders);
+  document.getElementById('ordersEmpty').style.display = ids.length? 'none':'block';
+  list.innerHTML = '';
+
+  const active = ids.filter(id => !orders[id].inactive)
+                     .sort((a,b)=>(orders[a].createdTs||0)-(orders[b].createdTs||0));
+  const inactive = ids.filter(id => orders[id].inactive)
+                       .sort((a,b)=>(orders[b].deactivatedTs||0)-(orders[a].deactivatedTs||0));
+
+  function renderCard(id){
+    const o = orders[id];
+    const entries = o.entries ? Object.values(o.entries).sort((a,b)=>(a.ts||0)-(b.ts||0)) : [];
+    const card = document.createElement('div');
+    card.className = 'order-card' + (o.inactive? ' inactive':'');
+    const createdLabel = o.createdLabel ? `оформлен: ${o.createdLabel}` : '';
+    const deactLabel = o.deactivatedLabel ? ` · снят: ${o.deactivatedLabel}` : '';
+
+    const historyHtml = entries.length ? `
+      <details class="order-history">
+        <summary>история заказа (${entries.length})</summary>
+        ${entries.map(e => `
+          <div class="order-history-line">
+            <span>${escapeHtml(e.text)}</span>
+            <span class="order-history-time">${e.label||''}</span>
+          </div>
+        `).join('')}
+      </details>
+    ` : '';
+
+    card.innerHTML = `
+      <div class="order-name">${escapeHtml(o.name)}</div>
+      <div class="order-dates">${createdLabel}${deactLabel}</div>
+      ${historyHtml}
+      <div class="order-btns">
+        ${o.inactive
+          ? `<button class="order-btn del" onclick="delOrder('${id}')">Удалить совсем</button>`
+          : `<button class="order-btn done" onclick="requestDeactivate('${id}')">Деактивировать</button>
+             <button class="order-btn del" onclick="delOrder('${id}')">Удалить</button>`
+        }
+      </div>
+    `;
+    return card;
+  }
+
+  active.forEach(id => list.appendChild(renderCard(id)));
+
+  // гс заметка посередине — между активными и неактивными заказами
+  const midWrap = document.createElement('div');
+  midWrap.className = 'voice-note small';
+  midWrap.id = 'voiceNote-ordersMid';
+  midWrap.innerHTML = `
+    <div class="voice-note-label">гс заметка<span class="rec-state" id="voiceState-ordersMid"></span></div>
+    <div class="voice-note-btns">
+      <button class="press-btn" id="voicePlayBtn-ordersMid" onclick="playVoiceNote('ordersMid')" disabled>НАЖМИ#6</button>
+    </div>
+  `;
+  list.appendChild(midWrap);
+  refreshVoiceNoteUI('ordersMid');
+
+  if(inactive.length){
+    const label = document.createElement('div');
+    label.className = 'order-section-label';
+    label.textContent = 'неактивные';
+    list.appendChild(label);
+    inactive.forEach(id => list.appendChild(renderCard(id)));
+  }
+}
+
+function findOrderIdByName(name){
+  const target = name.trim().toLowerCase();
+  return Object.keys(orders).find(id => (orders[id].name||'').trim().toLowerCase() === target && !orders[id].inactive);
+}
+
+function addOrder(){
+  const nameInput = document.getElementById('orderName');
+  const name = nameInput.value.trim();
+  if(!name){ showToast('Введи имя клиента'); return; }
+  if(!cart.length){ showToast('Добавь хотя бы один товар в корзину'); return; }
+
+  const now = Date.now();
+  const existingId = findOrderIdByName(name);
+
+  if(existingId){
+    const o = orders[existingId];
+    const entries = o.entries ? Object.entries(o.entries) : [];
+    let lastId = null, lastEntry = null;
+    entries.forEach(([eid, e])=>{
+      if(!lastEntry || (e.ts||0) > (lastEntry.ts||0)){ lastId = eid; lastEntry = e; }
+    });
+
+    if(lastEntry && (now - (lastEntry.ts||0)) <= MERGE_WINDOW_MS){
+      // объединяем корзину с последней записью того же клиента
+      const mergedItems = mergeCartItems(lastEntry.items || [], cart);
+      db.ref('lavka/holds/'+existingId+'/entries/'+lastId).set({
+        items: mergedItems,
+        text: cartToText(mergedItems),
+        ts: now,
+        label: nowLabel()
+      });
+    } else {
+      const eid = db.ref('lavka/holds/'+existingId+'/entries').push().key;
+      db.ref('lavka/holds/'+existingId+'/entries/'+eid).set({
+        items: cart, text: cartToText(cart), ts: now, label: nowLabel()
+      });
+    }
+    showToast('Дозаказ добавлен');
+  } else {
+    const id = ordersRef.push().key;
+    const eid = db.ref('lavka/holds/'+id+'/entries').push().key;
+    db.ref('lavka/holds/'+id).set({
+      name,
+      inactive:false,
+      createdTs: now,
+      createdLabel: nowLabel(),
+      entries: { [eid]: { items: cart, text: cartToText(cart), ts: now, label: nowLabel() } }
+    });
+    showToast('Заказ записан');
+  }
+
+  nameInput.value = '';
+  cart = [];
+  renderCart();
+}
+
+function requestDeactivate(id){
+  const o = orders[id];
+  if(!confirm(`Вы уверены, что хотите деактивировать заказ «${o.name}»?`)) return;
+
+  const now = Date.now();
+  const label = nowLabel();
+
+  db.ref('lavka/holds/'+id).update({
+    inactive: true,
+    deactivatedTs: now,
+    deactivatedLabel: label
+  });
+
+  // необязательная заметка (напр. чем/как оплатили) — попадёт на кассу
+  const note = prompt('Заметка (например, чем и как оплатили). Можно оставить пустым:');
+  if(note !== null && note.trim() !== ''){
+    const nid = deactNotesRef.push().key;
+    deactNotesRef.child(nid).set({
+      name: o.name,
+      text: note.trim(),
+      ts: now,
+      label: label
+    });
+  }
+
+  showToast('Заказ деактивирован');
+}
+
+function delOrder(id){
+  if(!confirm('Удалить запись совсем? Это нельзя отменить.')) return;
+  db.ref('lavka/holds/'+id).remove();
+}
+</script>
+
+</body>
+</html>
