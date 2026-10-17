@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WallpaperAgent — скачать</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --ink: #14202e;
+    --muted: #5a6878;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --panel: #ffffff;
+    --line: #d5dce5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1722;
+      --ink: #e8eef6;
+      --muted: #93a1b3;
+      --accent: #5b9dff;
+      --accent-ink: #08111d;
+      --panel: #172233;
+      --line: #263449;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 420px;
+    padding: 36px 32px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  h1 { margin: 0 0 8px; font-size: 1.6rem; font-weight: 650; letter-spacing: -0.01em; }
+  p  { margin: 0 0 28px; color: var(--muted); line-height: 1.5; }
+  a.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  a.btn:hover { filter: brightness(1.08); }
+  a.btn:active { transform: scale(.98); }
+  a.btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  svg { width: 20px; height: 20px; flex: none; }
+  small { display: block; margin-top: 14px; text-align: center; color: var(--muted); font-size: .85rem; }
+  @media (prefers-reduced-motion: reduce) { a.btn { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>WallpaperAgent</h1>
+  <p>Скачайте программу для Windows одним нажатием.</p>
+  <a class="btn" href="WallpaperAgent.exe" download="WallpaperAgent.exe">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>
+    </svg>
+    Скачать WallpaperAgent.exe
+  </a>
+  <small>Файл .exe для Windows</small>
+</main>
+</body>
+</html>
